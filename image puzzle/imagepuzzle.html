@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SlideQuest: Shape Shuffle</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#6ee7b7; --muted:#9aa4b2;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#071029 0%, #0c1a2b 100%);color:#e6eef8}
+    .wrap{max-width:1100px;margin:28px auto;padding:18px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--card);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:var(--accent);cursor:pointer}
+    .btn.secondary{color:var(--muted)}
+    .settings{display:flex;gap:8px;align-items:center;margin-top:12px}
+
+    .board-wrap{margin-top:18px;display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media (max-width:980px){.board-wrap{grid-template-columns:1fr;}}
+
+    .board-card{background:rgba(255,255,255,0.03);padding:12px;border-radius:12px;display:flex;flex-direction:column;align-items:center}
+    .board{width:100%;max-width:720px;aspect-ratio:1/1;position:relative;background:#081223;border-radius:10px;overflow:hidden;touch-action:none}
+
+    .tile{position:absolute;display:grid;place-items:center;user-select:none;cursor:pointer;border-radius:6px;transition:transform 260ms cubic-bezier(.22,.9,.3,1), box-shadow 200ms;will-change:transform}
+    .tile img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+    .tile.empty{background:transparent;cursor:default}
+    .tile:hover{box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+
+    .sidebar{display:flex;flex-direction:column;gap:10px}
+    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
+    .row{display:flex;justify-content:space-between;align-items:center}
+
+    input[type=range]{width:140px}
+    .upload{display:flex;align-items:center;gap:8px}
+    .info{color:var(--muted);font-size:13px}
+    .small{font-size:13px;color:var(--muted)}
+
+    .footer{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* responsive touch target */
+    .btn, input[type=file], select{min-height:40px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>SlideQuest: Shape Shuffle</h1>
+        <div class="small">Drag / Tap / Use arrow keys. Upload your own image or use the sample.</div>
+      </div>
+      <div class="controls">
+        <button id="shuffleBtn" class="btn">Shuffle</button>
+        <button id="solveBtn" class="btn secondary">Show Solution</button>
+      </div>
+    </header>
+
+    <div class="settings">
+      <label class="small">Grid: <span id="sizeLabel">3 × 3</span></label>
+      <input id="sizeRange" type="range" min="2" max="6" value="3">
+      <label class="small">Moves: <span id="moves">0</span></label>
+      <label class="small">Time: <span id="time">00:00</span></label>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board-card">
+        <div id="board" class="board" aria-label="puzzle-board"></div>
+        <div class="footer">Tip: For best play, choose a photo with a clear subject.</div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="panel">
+          <div class="row">
+            <div class="small">Image</div>
+            <div class="upload">
+              <input id="file" type="file" accept="image/*" aria-label="upload image">
+              <button id="resetImg" class="btn secondary">Use Sample</button>
+            </div>
+          </div>
+          <div class="small" style="margin-top:8px">Click tiles next to empty space to move. Use keyboard arrows or swipe on mobile.</div>
+        </div>
+
+        <div class="panel">
+          <div class="row"><div class="small">Status</div><div class="info" id="status">Ready</div></div>
+          <div style="height:8px"></div>
+          <div class="row"><div class="small">Shuffle depth</div><div><input id="shuffleDepth" type="range" min="5" max="500" value="80"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="row"><div class="small">Controls</div></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="hintBtn" class="btn secondary">Hint (Highlight)</button>
+            <button id="resetBtn" class="btn">Reset</button>
+          </div>
+        </div>
+
+        <div class="panel small">
+          <div><strong>Accessibility</strong></div>
+          <div>Keyboard: Arrow keys to move. High-contrast tiles for visibility.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Fixed Sliding image puzzle (NxN)
+    const boardEl = document.getElementById('board');
+    const sizeRange = document.getElementById('sizeRange');
+    const sizeLabel = document.getElementById('sizeLabel');
+    const movesEl = document.getElementById('moves');
+    const timeEl = document.getElementById('time');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const fileInput = document.getElementById('file');
+    const resetImg = document.getElementById('resetImg');
+    const shuffleDepth = document.getElementById('shuffleDepth');
+    const solveBtn = document.getElementById('solveBtn');
+    const hintBtn = document.getElementById('hintBtn');
+    const statusEl = document.getElementById('status');
+
+    let size = parseInt(sizeRange.value,10);
+    let tiles = []; // tiles[position] = value (original tile id)
+    let emptyIndex = 0;
+    let img = new Image();
+    let moves = 0;
+    let timer = null; let startTime = null;
+    let tileSizePx = 0;
+
+    const sampleImage = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><rect width="100%" height="100%" fill="#081224"/><g fill="#6ee7b7"><circle cx="400" cy="260" r="120"/><rect x="230" y="430" width="340" height="260" rx="24"/></g><text x="50%" y="94%" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#9aa4b2">Sample Image — Upload your own!</text></svg>`);
+    img.src = sampleImage;
+
+    // UTILITIES
+    function formatTime(ms){
+      if (!ms) return '00:00';
+      const s = Math.floor(ms/1000);
+      const mm = Math.floor(s/60).toString().padStart(2,'0');
+      const ss = (s%60).toString().padStart(2,'0');
+      return mm+':'+ss;
+    }
+
+    function setStatus(txt){ statusEl.textContent = txt }
+
+    // initialize or rebuild board
+    function buildBoard(){
+      boardEl.innerHTML='';
+      tiles = [];
+      const N = size;
+      // calculate square area
+      const rect = boardEl.getBoundingClientRect();
+      const side = Math.min(rect.width || (window.innerWidth - 60), rect.height || 720);
+      tileSizePx = side / N;
+      boardEl.style.height = side + 'px';
+
+      // create tiles array in solved order (0..N*N-1), last is empty
+      for(let i=0;i<N*N;i++) tiles.push(i);
+      emptyIndex = tiles.length-1;
+
+      // create tile elements with stable attributes:
+      // data-value = original id (never changes), data-pos = current position (updated on swaps)
+      for(let i=0;i<tiles.length;i++){
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.dataset.value = i;      // original id (which image piece it should show)
+        tile.dataset.pos = i;        // current position (changes when we move)
+        tile.style.width = tileSizePx + 'px';
+        tile.style.height = tileSizePx + 'px';
+        const r = Math.floor(i/N), c = i%N;
+        tile.style.transform = `translate(${c*tileSizePx}px, ${r*tileSizePx}px)`;
+        if(i === emptyIndex){
+          tile.classList.add('empty');
+          tile.setAttribute('aria-hidden','true');
+        } else {
+          const imgEl = document.createElement('img');
+          imgEl.draggable = false;
+          tile.appendChild(imgEl);
+        }
+        boardEl.appendChild(tile);
+      }
+
+      createTileImages();
+      moves = 0; updateHUD();
+      stopTimer(); setStatus('Ready');
+    }
+
+    function createTileImages(){
+      const N = size;
+      // prepare square canvas cropping the source image
+      const minSide = Math.min(img.naturalWidth || 800, img.naturalHeight || 800);
+      const sx = (img.naturalWidth - minSide) / 2;
+      const sy = (img.naturalHeight - minSide) / 2;
+      const piece = Math.floor(minSide / N);
+      const canvas = document.createElement('canvas');
+      canvas.width = minSide;
+      canvas.height = minSide;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, minSide, minSide);
+
+      // For each tile element, set its image according to its data-value (original tile index)
+      boardEl.querySelectorAll('.tile').forEach(tile=>{
+        const imgEl = tile.querySelector('img');
+        if(!imgEl) return; // empty tile
+        const val = parseInt(tile.dataset.value,10);
+        const r = Math.floor(val / N), c = val % N;
+        const tmp = document.createElement('canvas');
+        tmp.width = piece; tmp.height = piece;
+        const tctx = tmp.getContext('2d');
+        tctx.putImageData(ctx.getImageData(c*piece, r*piece, piece, piece), 0, 0);
+        imgEl.src = tmp.toDataURL();
+      });
+    }
+
+    // shuffle by making legal moves (keeps solvable)
+    function shuffleBoard(movesCount=80){
+      const N = size; let last = -1;
+      for(let k=0;k<movesCount;k++){
+        const neighbors = getNeighbors(emptyIndex);
+        const choices = neighbors.filter(n=>n!==last);
+        const pick = choices[Math.floor(Math.random()*choices.length)];
+        swapTiles(pick, emptyIndex, false);
+        last = pick;
+      }
+      moves = 0; updateHUD(); setStatus('Shuffled');
+      startTimerIfNeeded();
+    }
+
+    function getNeighbors(index){
+      const N = size; const r = Math.floor(index/N), c = index%N; const arr=[];
+      if(r>0) arr.push(index - N);
+      if(r<N-1) arr.push(index + N);
+      if(c>0) arr.push(index - 1);
+      if(c<N-1) arr.push(index + 1);
+      return arr;
+    }
+
+    // CORE: swapTiles uses data-pos (synchronous) and updates tiles[] immediately
+    function swapTiles(a,b, countMove=true){
+      // a and b are position indices
+      const tileA = boardEl.querySelector(`.tile[data-pos='${a}']`);
+      const tileB = boardEl.querySelector(`.tile[data-pos='${b}']`);
+      if(!tileA || !tileB) return;
+      const posA = getCoords(a), posB = getCoords(b);
+      // animate transforms
+      tileA.style.transform = `translate(${posB.x}px, ${posB.y}px)`;
+      tileB.style.transform = `translate(${posA.x}px, ${posA.y}px)`;
+      // update attributes synchronously so subsequent queries are correct
+      tileA.dataset.pos = String(b);
+      tileB.dataset.pos = String(a);
+      // swap in tiles mapping
+      [tiles[a], tiles[b]] = [tiles[b], tiles[a]];
+      if(countMove){
+        moves++; updateHUD(); startTimerIfNeeded();
+      }
+      emptyIndex = tiles.indexOf(size*size - 1);
+      checkSolvedDebounced();
+    }
+
+    function getCoords(index){ const N=size; const r=Math.floor(index/N), c=index%N; return {x:c*tileSizePx, y:r*tileSizePx}; }
+    function canMove(index){ return getNeighbors(index).includes(emptyIndex); }
+
+    function tileClickHandler(e){
+      const tile = e.currentTarget;
+      const idx = parseInt(tile.dataset.pos,10);
+      if(tile.classList.contains('empty')) return;
+      if(canMove(idx)) swapTiles(idx, emptyIndex, true);
+    }
+
+    // keyboard handlers (move a tile into the empty slot in the arrow direction)
+    window.addEventListener('keydown', (e)=>{
+      const N = size; let handled=false;
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+        const r = Math.floor(emptyIndex/N), c = emptyIndex%N;
+        let target=null;
+        if(e.key==='ArrowUp' && r<N-1) target = emptyIndex + N;
+        if(e.key==='ArrowDown' && r>0) target = emptyIndex - N;
+        if(e.key==='ArrowLeft' && c<N-1) target = emptyIndex + 1;
+        if(e.key==='ArrowRight' && c>0) target = emptyIndex -1;
+        if(target!==null){ swapTiles(target, emptyIndex, true); handled=true; }
+      }
+      if(handled) e.preventDefault();
+    });
+
+    // pointer (touch) down/up for swipe & tap
+    let touchStart = null;
+    boardEl.addEventListener('pointerdown', (e)=>{
+      boardEl.setPointerCapture(e.pointerId);
+      touchStart = {x:e.clientX, y:e.clientY, id:e.pointerId};
+    });
+    boardEl.addEventListener('pointerup', (e)=>{
+      if(!touchStart) return; try{ boardEl.releasePointerCapture(e.pointerId); }catch(err){}
+      const dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      if(Math.max(absX,absY) < 30) { // tap
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const tile = el?.closest('.tile'); if(tile) tileClickHandler({currentTarget:tile});
+      } else {
+        let dir = null; if(absX>absY) dir = dx>0? 'right':'left'; else dir = dy>0? 'down':'up';
+        handleSwipe(dir);
+      }
+      touchStart=null;
+    });
+
+    function handleSwipe(dir){
+      const N=size; const r=Math.floor(emptyIndex/N), c=emptyIndex%N; let target=null;
+      if(dir==='up' && r<N-1) target = emptyIndex + N;
+      if(dir==='down' && r>0) target = emptyIndex - N;
+      if(dir==='left' && c<N-1) target = emptyIndex +1;
+      if(dir==='right' && c>0) target = emptyIndex -1;
+      if(target!==null) swapTiles(target, emptyIndex, true);
+    }
+
+    // solved check
+    let solveTimeout=null;
+    function checkSolvedDebounced(){ if(solveTimeout) clearTimeout(solveTimeout); solveTimeout = setTimeout(checkSolved, 220); }
+    function checkSolved(){
+      const solved = tiles.every((v,i)=>v===i);
+      if(solved){ stopTimer(); setStatus('Solved! 🎉'); }
+    }
+
+    // HUD
+    function updateHUD(){ movesEl.textContent = moves; const elapsed = startTime ? Date.now()-startTime : 0; timeEl.textContent = formatTime(elapsed); }
+
+    function startTimerIfNeeded(){ if(!startTime){ startTime = Date.now(); timer = setInterval(updateHUD, 500); } }
+    function stopTimer(){ if(timer) clearInterval(timer); timer=null; startTime=null; updateHUD(); }
+
+    // Controls wiring
+    shuffleBtn.addEventListener('click', ()=>{ shuffleBoard(parseInt(shuffleDepth.value,10)); });
+    sizeRange.addEventListener('input', ()=>{ size = parseInt(sizeRange.value,10); sizeLabel.textContent = `${size} × ${size}`; buildBoard(); });
+    resetBtn.addEventListener('click', ()=>{ buildBoard(); });
+    resetImg.addEventListener('click', ()=>{ img.src = sampleImage; img.onload = ()=>{ createTileImages(); setStatus('Sample image loaded'); }; });
+
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0]; if(!f) return;
+      const url = URL.createObjectURL(f);
+      const newImg = new Image();
+      newImg.onload = ()=>{ img = newImg; createTileImages(); setStatus('Custom image loaded'); URL.revokeObjectURL(url); };
+      newImg.src = url;
+    });
+
+    // hint: briefly highlight a wrong tile
+    hintBtn.addEventListener('click', ()=>{
+      const wrong = tiles.map((v,i)=>({v,i})).filter(x=>x.v!==x.i);
+      if(wrong.length===0) { setStatus('Already solved'); return; }
+      const pick = wrong[Math.floor(Math.random()*wrong.length)];
+      const el = boardEl.querySelector(`.tile[data-pos='${pick.i}']`);
+      if(!el) return;
+      const prev = el.style.boxShadow; el.style.boxShadow = '0 0 0 4px rgba(110,231,183,0.18), 0 12px 30px rgba(0,0,0,0.6)';
+      setTimeout(()=> el.style.boxShadow = prev, 900);
+    });
+
+    // naive solver animation (keeps using swapTiles which is now robust)
+    solveBtn.addEventListener('click', ()=>{
+      const N=size; // simple step-by-step move each tile to its place (not optimal but works)
+      const maxSteps = 800;
+      let steps = 0;
+      (function step(){
+        if(tiles.every((v,i)=>v===i) || steps > maxSteps) { setStatus('Solved / done'); return; }
+        // pick first position that is incorrect and move its tile toward it greedily
+        let targetIndex = tiles.findIndex((v,i)=>v!==i);
+        if(targetIndex === -1) return;
+        const valueToPlace = targetIndex;
+        let currentPos = tiles.indexOf(valueToPlace);
+        if(currentPos === targetIndex) { steps++; return step(); }
+        // move it one step toward target (prefer vertical first)
+        const tr = Math.floor(targetIndex/N), tc = targetIndex%N;
+        const cr = Math.floor(currentPos/N), cc = currentPos%N;
+        let nextPos = null;
+        if(cr < tr) nextPos = currentPos + N;
+        else if(cr > tr) nextPos = currentPos - N;
+        else if(cc < tc) nextPos = currentPos + 1;
+        else if(cc > tc) nextPos = currentPos - 1;
+        if(nextPos !== null){
+          // ensure empty is neighbor of nextPos; if not, move empty closer by swapping a neighbor
+          const empty = tiles.indexOf(N*N-1);
+          if(!getNeighbors(nextPos).includes(empty)){
+            // move empty closer: pick neighbor of empty that reduces distance to nextPos
+            const options = getNeighbors(empty);
+            options.sort((a,b)=> (Math.abs(Math.floor(a/N)-Math.floor(nextPos/N))+Math.abs(a%N-nextPos%N)) - (Math.abs(Math.floor(b/N)-Math.floor(nextPos/N))+Math.abs(b%N-nextPos%N)));
+            swapTiles(options[0], empty, false);
+          } else {
+            swapTiles(nextPos, empty, false);
+          }
+        }
+        steps++;
+        setTimeout(step, 10);
+      })();
+      setStatus('Animating solution...');
+    });
+
+    function manhattanDist(a,b){ const N=size; const ra=Math.floor(a/N), ca=a%N, rb=Math.floor(b/N), cb=b%N; return Math.abs(ra-rb)+Math.abs(ca-cb); }
+
+    // ensure click handlers attached
+    function attachTileListeners(){
+      boardEl.querySelectorAll('.tile').forEach(t=>{
+        t.removeEventListener('click', tileClickHandler);
+        t.addEventListener('click', tileClickHandler);
+      });
+    }
+    const obs = new MutationObserver(()=> attachTileListeners());
+    obs.observe(boardEl, {childList:true, subtree:true});
+
+    // resize debounce
+    let rto=null; window.addEventListener('resize', ()=>{ if(rto) clearTimeout(rto); rto=setTimeout(()=>{ buildBoard(); }, 250); });
+
+    // init
+    img.onload = ()=>{ buildBoard(); attachTileListeners(); };
+    if(img.complete) { buildBoard(); attachTileListeners(); }
+  </script>
+</body>
+</html>

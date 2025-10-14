@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Hero - Build Your PC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: #f0f0f0;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        #game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+            align-items: start;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        #parts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .part {
+            background: linear-gradient(145deg, #f0f0f0, #cacaca);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 5px 5px 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .part:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .part:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+
+        .part img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+            object-fit: contain;
+        }
+
+        .part-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        #pc {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .dropzone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.1);
+            position: relative;
+        }
+
+        .dropzone.drag-over {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .dropzone.filled {
+            background: linear-gradient(145deg, #e8f5e8, #c8e6c9);
+            border-color: #4caf50;
+            border-style: solid;
+        }
+
+        .dropzone img {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+        }
+
+        .dropzone-text {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        #quiz {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .quiz-question {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .quiz-question h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .quiz-option {
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .quiz-option:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .quiz-option.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .quiz-option.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .celebration {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(145deg, #e8f5e8, #c8e6c9);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .celebration h3 {
+            color: #2e7d32;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .celebration p {
+            color: #388e3c;
+            font-size: 1.1rem;
+        }
+
+        .reset-btn {
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            #game-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            #parts {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+
+            .part {
+                padding: 10px;
+            }
+
+            .part img {
+                width: 40px;
+                height: 40px;
+            }
+
+            .quiz-question {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .part {
+                padding: 8px;
+            }
+
+            .part img {
+                width: 30px;
+                height: 30px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bounce {
+            animation: bounce 0.6s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 60%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            80% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Hardware Hero</h1>
+        <p class="subtitle">Build your virtual computer by dragging components to their correct slots!</p>
+
+        <div id="game-container">
+            <div class="panel">
+                <h2>🔧 Available Components</h2>
+                <div id="parts">
+                    <div class="part" draggable="true" id="cpu">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzMzMzMzMyIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIxNiIgeT0iMTYiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIyOCIgeT0iMTYiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSI0MCIgeT0iMTYiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNiIgeT0iMjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIyOCIgeT0iMjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSI0MCIgeT0iMjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNiIgeT0iNDAiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIyOCIgeT0iNDAiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSI0MCIgeT0iNDAiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" alt="CPU">
+                        <div class="part-name"></div>
+                    </div>
+                    <div class="part" draggable="true" id="ram">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iMTIiIHdpZHRoPSI0OCIgaGVpZ2h0PSI0MCIgcng9IjMiIGZpbGw9IiM0NDQiIHN0cm9rZT0iIzY2NiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHJlY3QgeD0iMTIiIHk9IjE2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDA3YWNjIi8+PHJlY3QgeD0iMjQiIHk9IjE2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDA3YWNjIi8+PHJlY3QgeD0iMzYiIHk9IjE2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDA3YWNjIi8+PHJlY3QgeD0iNDQiIHk9IjE2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDA3YWNjIi8+PHJlY3QgeD0iMTIiIHk9IjIwIiB3aWR0aD0iNDAiIGhlaWdodD0iOCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjEyIiB5PSIzMiIgd2lkdGg9IjQwIiBoZWlnaHQ9IjgiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMiIgeT0iNDQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI4IiBmaWxsPSIjMzMzIi8+PC9zdmc+" alt="RAM">
+                        <div class="part-name"></div>
+                    </div>
+                    <div class="part" draggable="true" id="hdd">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iMTIiIHdpZHRoPSI0OCIgaGVpZ2h0PSI0MCIgcng9IjMiIGZpbGw9IiMyMjIiIHN0cm9rZT0iIzQ0NCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwNyIgIHN0cm9rZS13aWR0aD0iMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwNyIgc3Ryb2tlLXdpZHRoPSIxIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iNCIgZmlsbD0iIzAwNyIvPjwvc3ZnPg==" alt="Hard Drive">
+                        <div class="part-name"></div>
+                    </div>
+                    <div class="part" draggable="true" id="gpu">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzIyMiIgc3Ryb2tlPSIjNDQ0IiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIxMiIgeT0iMTIiIHdpZHRoPSI0MCIgaGVpZ2h0PSI4IiBmaWxsPSIjMDA3YWNjIi8+PHJlY3QgeD0iMTIiIHk9IjI0IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9IiMwMDdhY2MiLz48cmVjdCB4PSIzMiIgeT0iMjQiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxNiIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjEyIiB5PSI0NCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjgiIGZpbGw9IiMwMDdhY2MiLz48L3N2Zz4=" alt="GPU">
+                        <div class="part-name"></div>
+                    </div>
+                    <div class="part" draggable="true" id="psu">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iMTIiIHdpZHRoPSI0OCIgaGVpZ2h0PSI0MCIgcng9IjMiIGZpbGw9IiM1NTUiIHN0cm9rZT0iIzc3NyIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMjAiIGN5PSIzMiIgcj0iNiIgZmlsbD0iIzAwNyIgLz48cmVjdCB4PSIzMiIgeT0iMjgiIHdpZHRoPSIyMCIgaGVpZ2h0PSI4IiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iNDQiIHk9IjI0IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNiIgZmlsbD0iIzMzMyIvPjwvc3ZnPg==" alt="PSU">
+                        <div class="part-name"></div>
+                    </div>
+                    <div class="part" draggable="true" id="motherboard">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzAwN2FjYyIgc3Ryb2tlPSIjMDA1NmIzIiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIxMiIgeT0iMTIiIHdpZHRoPSIzMiIgaGVpZ2h0PSI0IiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTIiIHk9IjE4IiB3aWR0aD0iMTIiIGhlaWdodD0iOCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjI4IiB5PSIxOCIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjQwIiB5PSIxOCIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjEyIiB5PSIzMCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMiIgeT0iMzgiIHdpZHRoPSIyMCIgaGVpZ2h0PSI0IiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMzYiIHk9IjM4IiB3aWR0aD0iMTYiIGhlaWdodD0iNCIgZmlsbD0iIzMzMyIvPjwvc3ZnPg==" alt="Motherboard">
+                        <div class="part-name"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🖥️ Your PC Build</h2>
+                <div id="pc">
+                    <div class="dropzone" data-accept="motherboard">
+                        <span class="dropzone-text">Drop Motherboard here</span>
+                    </div>
+                    <div class="dropzone" data-accept="cpu">
+                        <span class="dropzone-text">Drop CPU here</span>
+                    </div>
+                    <div class="dropzone" data-accept="ram">
+                        <span class="dropzone-text">Drop RAM here</span>
+                    </div>
+                    <div class="dropzone" data-accept="gpu">
+                        <span class="dropzone-text">Drop Graphics Card here</span>
+                    </div>
+                    <div class="dropzone" data-accept="hdd">
+                        <span class="dropzone-text">Drop Hard Drive here</span>
+                    </div>
+                    <div class="dropzone" data-accept="psu">
+                        <span class="dropzone-text">Drop Power Supply here</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quiz">
+            <h2>🧠 Hardware Knowledge Quiz</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            
+            <div id="quiz-content">
+                <!-- Quiz questions will be populated by JavaScript -->
+            </div>
+            
+            <div class="celebration" id="celebration" style="display: none;">
+                <h3>🎉 Congratulations!</h3>
+                <p>You've successfully built your PC and mastered the hardware quiz!</p>
+                <button class="reset-btn" onclick="resetGame()">Build Another PC</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const parts = document.querySelectorAll('.part');
+        const dropzones = document.querySelectorAll('.dropzone');
+        let placedCount = 0;
+        let currentQuizQuestion = 0;
+        let score = 0;
+
+        const quizQuestions = [
+            {
+                question: "What is the primary function of the CPU?",
+                options: [
+                    "Stores data permanently",
+                    "Processes instructions and performs calculations",
+                    "Provides power to the system",
+                    "Displays graphics on screen"
+                ],
+                correct: 1
+            },
+            {
+                question: "What does RAM stand for and what does it do?",
+                options: [
+                    "Random Access Memory - temporary storage for active programs",
+                    "Read And Modify - permanent data storage",
+                    "Remote Access Module - network connectivity",
+                    "Real-time Application Manager - system processes"
+                ],
+                correct: 0
+            },
+            {
+                question: "What is the purpose of a GPU?",
+                options: [
+                    "To store the operating system",
+                    "To provide power to components",
+                    "To handle graphics rendering and parallel processing",
+                    "To connect all components together"
+                ],
+                correct: 2
+            },
+            {
+                question: "What does the Power Supply Unit (PSU) do?",
+                options: [
+                    "Stores electricity for later use",
+                    "Converts AC power to DC power for computer components",
+                    "Cools down the system",
+                    "Processes data"
+                ],
+                correct: 1
+            },
+            {
+                question: "What is the motherboard's role in a computer?",
+                options: [
+                    "Just holds components in place",
+                    "Connects and allows communication between all components",
+                    "Stores the BIOS only",
+                    "Provides internet connectivity"
+                ],
+                correct: 1
+            },
+            {
+                question: "What type of storage is a Hard Drive?",
+                options: [
+                    "Temporary storage",
+                    "Cache memory",
+                    "Permanent storage for files and programs",
+                    "Graphics memory"
+                ],
+                correct: 2
+            }
+        ];
+
+        // Drag and drop functionality
+        parts.forEach(part => {
+            part.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', part.id);
+                part.style.opacity = '0.5';
+            });
+
+            part.addEventListener('dragend', e => {
+                part.style.opacity = '1';
+            });
+        });
+
+        dropzones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', e => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                
+                const partId = e.dataTransfer.getData('text/plain');
+                const correct = zone.getAttribute('data-accept');
+                
+                if (partId === correct) {
+                    const part = document.getElementById(partId);
+                    const img = part.querySelector('img').cloneNode(true);
+                    const name = part.querySelector('.part-name').textContent;
+                    
+                    zone.innerHTML = '';
+                    zone.appendChild(img);
+                    zone.appendChild(document.createTextNode(name));
+                    zone.classList.add('filled');
+                    
+                    part.style.display = 'none';
+                    placedCount++;
+                    
+                    if (placedCount === 6) {
+                        setTimeout(() => {
+                            document.getElementById('quiz').style.display = 'block';
+                            document.getElementById('quiz').classList.add('fade-in');
+                            showQuizQuestion();
+                        }, 500);
+                    }
+                } else {
+                    zone.classList.add('bounce');
+                    setTimeout(() => zone.classList.remove('bounce'), 600);
+                }
+            });
+        });
+
+        function showQuizQuestion() {
+            if (currentQuizQuestion >= quizQuestions.length) {
+                showCelebration();
+                return;
+            }
+
+            const question = quizQuestions[currentQuizQuestion];
+            const quizContent = document.getElementById('quiz-content');
+            
+            quizContent.innerHTML = `
+                <div class="quiz-question fade-in">
+                    <h3>Question ${currentQuizQuestion + 1} of ${quizQuestions.length}</h3>
+                    <p>${question.question}</p>
+                    <div class="quiz-options">
+                        ${question.options.map((option, index) => `
+                            <div class="quiz-option" onclick="selectAnswer(${index})">
+                                ${option}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            updateProgress();
+        }
+
+        function selectAnswer(selectedIndex) {
+            const question = quizQuestions[currentQuizQuestion];
+            const options = document.querySelectorAll('.quiz-option');
+            
+            options.forEach((option, index) => {
+                option.style.pointerEvents = 'none';
+                if (index === question.correct) {
+                    option.classList.add('correct');
+                } else if (index === selectedIndex && selectedIndex !== question.correct) {
+                    option.classList.add('incorrect');
+                }
+            });
+            
+            if (selectedIndex === question.correct) {
+                score++;
+            }
+            
+            setTimeout(() => {
+                currentQuizQuestion++;
+                showQuizQuestion();
+            }, 1500);
+        }
+
+        function updateProgress() {
+            const progress = (currentQuizQuestion / quizQuestions.length) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+
+        function showCelebration() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('celebration').style.display = 'block';
+            document.getElementById('celebration').classList.add('fade-in');
+        }
+
+        function resetGame() {
+            placedCount = 0;
+            currentQuizQuestion = 0;
+            score = 0;
+            
+            // Reset parts
+            parts.forEach(part => {
+                part.style.display = 'block';
+            });
+            
+            // Reset dropzones
+            dropzones.forEach(zone => {
+                zone.innerHTML = `<span class="dropzone-text">Drop ${zone.getAttribute('data-accept').toUpperCase()} here</span>`;
+                zone.classList.remove('filled');
+            });
+            
+            // Hide quiz
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('celebration').style.display = 'none';
+            document.getElementById('progress-fill').style.width = '0%';
+        }
+    </script>
+</body>
+</html>

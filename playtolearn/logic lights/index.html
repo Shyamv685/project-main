@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GlowGrid: The Logic Challenge</title>
+  <style>
+    :root{
+      --bg:#0b132b; --panel:#151e3b; --panel2:#0f1832; --text:#e8eeff; --muted:#a6afd6;
+      --accent:#7ee3ff; --accent2:#a78bfa; --ok:#34d399; --warn:#facc15; --danger:#fb7185;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 20% -10%, #1a2150 0%, #0b132b 60%, #070d22 100%);
+    }
+    header{position:sticky; top:0; z-index:10; padding:18px clamp(14px,4vw,36px);
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(11,19,43,.95), rgba(11,19,43,.6) 60%, rgba(11,19,43,0));
+      backdrop-filter: blur(6px);
+      border-bottom:1px solid rgba(126,227,255,.2)
+    }
+    .logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;color:#0b1126;
+      background:linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow:0 10px 24px rgba(126,227,255,.25);
+    }
+    h1{margin:0; font-size:clamp(20px,4vw,34px)}
+    .tag{color:var(--muted); font-size:13px}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px clamp(14px,4vw,36px)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+    .card{background:linear-gradient(180deg, rgba(21,30,59,.95), rgba(21,30,59,.6));
+      border:1px solid rgba(126,227,255,.18); border-radius:18px; padding:14px; box-shadow:0 12px 30px rgba(0,0,0,.25);
+    }
+    .card h3{margin:6px 0 4px; font-size:18px}
+    .card p{margin:0 0 8px; color:var(--muted); font-size:14px}
+    .panel{border-radius:14px; border:1px dashed rgba(126,227,255,.28); padding:10px; background:var(--panel2)}
+    .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    .stack{display:grid; gap:10px}
+    button{border:0; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;
+      background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#0b1126; box-shadow:0 8px 18px rgba(126,227,255,.25);
+    }
+    button.ghost{background:transparent; color:var(--text); border:1px solid rgba(126,227,255,.28)}
+    input[type="text"], input[type="number"], input[type="file"], select{width:100%; background:#0f1534; color:var(--text); border:1px solid rgba(126,227,255,.28); border-radius:10px; padding:10px}
+    .muted{color:var(--muted)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .danger{color:var(--danger)}
+    .footer{margin:36px 0 18px; text-align:center; color:var(--muted); font-size:13px}
+
+    /* A) PROTOTYPE BUILDER */
+    .lab{display:grid; grid-template-columns:180px 1fr; gap:10px}
+    .bin{display:grid; gap:8px}
+    .part{padding:8px 10px; border-radius:10px; border:1px solid rgba(167,139,250,.28); cursor:grab; user-select:none; background:#0c1434}
+    #stage{position:relative; border-radius:12px; min-height:240px; background:#0a0f27; border:1px solid rgba(167,139,250,.25); overflow:hidden}
+    .node{position:absolute; left:0; top:0; transform:translate(var(--x,0px), var(--y,0px));
+      padding:8px 10px; border-radius:10px; border:1px solid rgba(126,227,255,.35); background:#0f1a3c; cursor:move}
+    .node:after{content:'⋮⋮'; opacity:.35; margin-left:8px}
+
+    /* B) IDEA MIXER */
+    .mixer{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+    .slot{padding:14px; text-align:center; border-radius:12px; border:1px solid rgba(126,227,255,.28); background:#0c1532; font-weight:800; min-height:64px}
+
+    /* C) LOGIC LIGHTS */
+    .lights{display:grid; grid-template-columns:repeat(3,80px); gap:8px; justify-content:center}
+    .light{width:80px; height:80px; border-radius:14px; display:grid; place-items:center; cursor:pointer; border:1px solid rgba(126,227,255,.3); background:#0a122d}
+    .light.on{box-shadow:0 0 0 2px rgba(52,211,153,.35) inset, 0 0 18px rgba(52,211,153,.25); background:#0f2a2d}
+
+    /* D) QUIZ */
+    .pill{padding:6px 10px; border-radius:999px; border:1px solid rgba(126,227,255,.28); font-size:12px}
+    .option{padding:10px; border-radius:12px; border:1px solid rgba(126,227,255,.28); cursor:pointer}
+    .option.correct{border-color:#34d399aa; background:#34d39922}
+    .option.wrong{border-color:#fb7185aa; background:#fb718522}
+
+    @media (max-width:840px){ .lab{grid-template-columns:1fr} }
+    @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">GGLC</div>
+    <div>
+      <h1>GlowGrid: The Logic Challenge</h1>
+      <div class="tag">Build ideas • Mix concepts • Solve logic • Learn fast — offline-ready</div>
+    </div>
+    <div style="margin-left:auto" class="row">
+      <button id="help" class="ghost">How to Play</button>
+      <button id="reset" class="ghost">Reset Progress</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="grid" style="grid-template-columns:1fr; max-width:600px; margin:0 auto;">
+      <!-- C) LOGIC LIGHTS (3x3 Lights Out) -->
+      <article class="card">
+        <h3>🧠 Logic Lights</h3>
+        <p>Turn all tiles <span class="ok">ON</span>. Clicking a tile toggles it and its neighbors.</p>
+        <div class="panel stack" style="align-items:center">
+          <div class="row" style="justify-content:space-between;width:100%">
+            <span class="pill">Moves: <span id="moves">0</span></span>
+            <button id="shuffle" class="ghost">Shuffle</button>
+          </div>
+          <div id="lights" class="lights" role="grid" aria-label="logic lights"></div>
+          <div id="status" class="muted"></div>
+        </div>
+      </article>
+    </section>
+
+    <div class="footer">Built with vanilla HTML • CSS • JS • Works offline • Great for expo booths</div>
+  </div>
+
+  <!-- Help modal (simple) -->
+  <dialog id="helpdlg" style="border:none; border-radius:16px; padding:0; max-width:560px; width:90%">
+    <div style="background:#0f1636; border:1px solid rgba(126,227,255,.28); border-radius:16px; overflow:hidden">
+      <div style="padding:16px 16px 0; font-weight:800">How to Play</div>
+      <div style="padding:12px 16px" class="muted">
+        <ul>
+          
+          <li><strong>Logic Lights:</strong> Make all tiles glow. A click toggles a tile and its neighbors. Press <em>Shuffle</em> for a new puzzle.</li>
+         </ul>
+      </div>
+      <div style="display:flex; gap:10px; padding:12px 16px; justify-content:flex-end">
+        <button id="closehelp" class="ghost">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // Helpers
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>document.querySelectorAll(s);
+
+    /* ============= C) LOGIC LIGHTS ============= */
+    (function(){
+      const grid = $('#lights'); const movesEl=$('#moves'); const status=$('#status');
+      let cells = new Array(9).fill(false); let moves=0;
+      function idx(x,y){ return y*3+x; }
+      function setCell(i,v){ cells[i]=v; $$('.light')[i].classList.toggle('on', v); }
+      function toggle(x,y){ [ [x,y], [x-1,y],[x+1,y],[x,y-1],[x,y+1] ].forEach(([cx,cy])=>{ if(cx>=0&&cx<3&&cy>=0&&cy<3){ const i=idx(cx,cy); setCell(i, !cells[i]); } }); moves++; movesEl.textContent=moves; check(); }
+      function render(){ grid.innerHTML=''; for(let y=0;y<3;y++){ for(let x=0;x<3;x++){ const d=document.createElement('div'); d.className='light'; d.role='gridcell'; d.tabIndex=0; d.addEventListener('click', ()=>toggle(x,y)); d.addEventListener('keydown', (e)=>{ if(e.key==='Enter') toggle(x,y); }); grid.appendChild(d); } } }
+      function shuffle(){ cells = cells.map(()=>Math.random()<0.5); moves=0; movesEl.textContent=moves; [...cells.keys()].forEach(i=> $$('.light')[i].classList.toggle('on', cells[i])); status.textContent=''; save(); }
+      function check(){ if(cells.every(v=>v)){ status.innerHTML = `<span class='ok'>Solved! 🎉</span> Moves: ${moves}`; } save(); }
+      function save(){ localStorage.setItem('fi_lights', JSON.stringify({cells, moves})); }
+      // init
+      render();
+      const saved = JSON.parse(localStorage.getItem('fi_lights')||'null');
+      if(saved){ cells=saved.cells; moves=saved.moves; movesEl.textContent=moves; [...cells.keys()].forEach(i=> setCell(i, cells[i])); }
+      else { shuffle(); }
+      $('#shuffle').addEventListener('click', shuffle);
+    })();
+
+    /* ============= HELP + RESET ============= */
+    (function(){
+      const dlg=$('#helpdlg'); $('#help').addEventListener('click', ()=>{ dlg.showModal(); }); $('#closehelp').addEventListener('click', ()=>dlg.close());
+      $('#reset').addEventListener('click', ()=>{ localStorage.removeItem('fi_lights'); location.reload(); });
+    })();
+  </script>
+</body>
+</html>

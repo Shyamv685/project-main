@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PlayLab: Fun that Teaches</title>
+  <style>
+    :root{
+      --bg:#071327; --panel:#0e1e3f; --panel2:#0b1732; --text:#eaf1ff; --muted:#9fb0d8;
+      --accent:#38e1b0; --accent2:#7aa8ff; --ok:#34d399; --warn:#f59e0b; --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; color:var(--text);
+      background: radial-gradient(1200px 800px at 10% -10%, #12265b 0%, #071327 60%, #050d1e 100%);
+    }
+    header{position:sticky; top:0; z-index:10; padding:18px clamp(14px,4vw,36px); display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(7,19,39,.95), rgba(7,19,39,.6) 60%, rgba(7,19,39,0)); backdrop-filter: blur(6px);
+      border-bottom:1px solid rgba(56,225,176,.25)
+    }
+    .logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;color:#071327;
+      background:linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow:0 10px 24px rgba(122,168,255,.25);
+    }
+    h1{margin:0; font-size:clamp(20px,4vw,34px)}
+    .tag{color:var(--muted); font-size:13px}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px clamp(14px,4vw,36px)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+    .card{background:linear-gradient(180deg, rgba(14,30,63,.95), rgba(14,30,63,.6)); border:1px solid rgba(122,168,255,.18); border-radius:18px; padding:14px; box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    .card h3{margin:6px 0 4px; font-size:18px}
+    .card p{margin:0 0 8px; color:var(--muted); font-size:14px}
+    .panel{border-radius:14px; border:1px dashed rgba(122,168,255,.28); padding:10px; background:var(--panel2)}
+    .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    .stack{display:grid; gap:10px}
+    .pill{padding:6px 10px; border-radius:999px; border:1px solid rgba(122,168,255,.28); font-size:12px}
+    button{border:0; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#071327; box-shadow:0 8px 18px rgba(122,168,255,.25)}
+    button.ghost{background:transparent; color:var(--text); border:1px solid rgba(122,168,255,.28)}
+    input[type="text"], input[type="number"], input[type="file"], select{width:100%; background:#0c1838; color:var(--text); border:1px solid rgba(122,168,255,.28); border-radius:10px; padding:10px}
+    .muted{color:var(--muted)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .danger{color:var(--danger)}
+    .footer{margin:36px 0 18px; text-align:center; color:var(--muted); font-size:13px}
+
+    /* A) WORD BUILDER */
+    .letters{display:grid; grid-template-columns:repeat(8,1fr); gap:6px}
+    .tile{border:1px solid rgba(122,168,255,.35); background:#0d1b3d; border-radius:10px; padding:12px; text-align:center; font-weight:800; cursor:pointer}
+    .slot{min-height:48px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed rgba(122,168,255,.35); border-radius:12px; padding:8px}
+
+    /* B) MATH SPRINT */
+    .big{font-size:28px; font-weight:800}
+
+    /* C) SCIENCE MATCH - REMOVED */
+
+    /* D) MEMORY FLIP */
+    .board{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+    .cardx{height:74px; display:grid; place-items:center; border-radius:12px; background:#0a1531; border:1px solid rgba(122,168,255,.35); cursor:pointer; font-size:28px}
+    .cardx.revealed{background:#0f244f}
+    .cardx.matched{box-shadow:0 0 0 2px rgba(56,225,176,.35) inset}
+
+    @media (max-width:640px){ .grid{grid-template-columns:1fr} .letters{grid-template-columns:repeat(6,1fr)} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">PL</div>
+    <div>
+      <h1>PlayLab: Fun that Teaches</h1>
+      <div class="tag">Fast mini‑games for reading, math, science & memory • works offline</div>
+    </div>
+    <div style="margin-left:auto" class="row">
+      <button id="help" class="ghost">How to Play</button>
+      <button id="reset" class="ghost">Reset Progress</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="grid">
+      <!-- A) WORD BUILDER -->
+      <article class="card">
+        <h3>🔤 Word Builder</h3>
+        <p>Tap letters to build the target word. Hints unlock after one mistake.</p>
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between">
+            <span class="pill">Target: <strong id="target">SMART</strong></span>
+            <span class="pill">Score: <span id="wscore">0</span></span>
+          </div>
+          <div id="built" class="slot" aria-live="polite"></div>
+          <div id="letters" class="letters"></div>
+          <div id="whint" class="muted"></div>
+          <div class="row" style="justify-content:space-between"><button id="wshuffle" class="ghost">New Word</button><button id="wclear" class="ghost">Clear</button></div>
+        </div>
+      </article>
+
+      <!-- B) MATH SPRINT -->
+      <article class="card">
+        <h3>🧮 Math Sprint</h3>
+        <p>60 seconds. Answer as many as you can. +1 for each correct.</p>
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between"><span class="pill">⏱️ <span id="time">60</span>s</span><span class="pill">Score: <span id="mscore">0</span></span></div>
+          <div id="mexpr" class="big">5 + 3 = ?</div>
+          <input id="mans" type="number" inputmode="numeric" placeholder="Your answer" />
+          <div class="row" style="justify-content:space-between"><button id="start">Start</button><button id="skip" class="ghost">Skip</button></div>
+          <div id="mmsg" class="muted"></div>
+        </div>
+      </article>
+
+      <!-- C) SCIENCE MATCH - REMOVED -->
+
+      <!-- D) MEMORY FLIP -->
+      <article class="card">
+        <h3>🧠 Memory Flip</h3>
+        <p>Find all matching pairs. Fewer moves = better!</p>
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between"><span class="pill">Moves: <span id="moves">0</span></span><button id="newboard" class="ghost">Shuffle</button></div>
+          <div id="board" class="board"></div>
+          <div id="mmmsg" class="muted"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- PROGRESS -->
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between; flex-wrap:wrap">
+        <div class="row" style="gap:8px">
+          <span class="pill">🏅 Badges:</span>
+          <span id="b_word" class="pill">Word Whiz ❌</span>
+          <span id="b_math" class="pill">Math Star ❌</span>
+          <!-- Science Sleuth badge removed -->
+          <span id="b_mem" class="pill">Memory Master ❌</span>
+        </div>
+        <button id="reset" class="ghost">Reset Progress</button>
+      </div>
+    </div>
+
+    <div class="footer">Built with vanilla HTML • CSS • JS • Offline-friendly • Perfect for expo demos</div>
+  </div>
+
+  <!-- Help modal (simple) -->
+  <dialog id="helpdlg" style="border:none; border-radius:16px; padding:0; max-width:560px; width:90%">
+    <div style="background:#0c1838; border:1px solid rgba(122,168,255,.28); border-radius:16px; overflow:hidden">
+      <div style="padding:16px 16px 0; font-weight:800">How to Play</div>
+      <div style="padding:12px 16px" class="muted">
+        <ul>
+          <li><strong>Word Builder:</strong> Tap letters to spell the target word. After one wrong letter, a hint appears. New word = shuffle.</li>
+          <li><strong>Math Sprint:</strong> Start the 60s timer and answer as many as you can. Skip to move on.</li>
+          <!-- Science Match removed -->
+          <li><strong>Memory Flip:</strong> Tap two cards to flip and match the pairs. Solve to earn the badge.</li>
+        </ul>
+      </div>
+      <div style="display:flex; gap:10px; padding:12px 16px; justify-content:flex-end">
+        <button id="closehelp" class="ghost">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // Utility helpers
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>document.querySelectorAll(s);
+    const memory = JSON.parse(localStorage.getItem('ptl_progress')||'{}');
+    function saveProgress(){ localStorage.setItem('ptl_progress', JSON.stringify(memory)); }
+    function badge(id, ok){ const el=$(id); el.textContent = el.textContent.replace('❌','').replace('✅','') + (ok?' ✅':' ❌'); }
+
+    /* ============= A) WORD BUILDER ============= */
+    (function(){
+      const words=['SMART','LEARN','LOGIC','CREATE','PUZZLE','BRAIN','SCIENCE','NUMBER','PLANET','MEMORY'];
+      let target='SMART', built=''; let score = Number(memory.wscore||0); let wrong=false;
+      const tEl=$('#target'); const bEl=$('#built'); const lEl=$('#letters'); const sEl=$('#wscore'); const hint=$('#whint');
+      function shuffleWord(){ target=words[Math.floor(Math.random()*words.length)]; tEl.textContent=target; built=''; wrong=false; hint.textContent=''; bEl.textContent=''; const letters=(target+randomLetters(8-target.length)).split(''); letters.sort(()=>Math.random()-0.5); lEl.innerHTML=''; letters.forEach(ch=>{ const d=document.createElement('div'); d.className='tile'; d.textContent=ch; d.addEventListener('click', ()=>pick(ch)); lEl.appendChild(d); }); }
+      function randomLetters(n){ const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ'; let s=''; for(let i=0;i<n;i++){ s+=A[Math.floor(Math.random()*A.length)]; } return s; }
+      function pick(ch){ built+=ch; bEl.textContent=built.split('').join(' '); if(!target.startsWith(built)){ wrong=true; hint.textContent=`Hint: starts with ${target[0]}…`; built=''; setTimeout(()=>{ bEl.textContent=''; }, 300); return; } if(built.length===target.length){ sEl.textContent=++score; memory.wscore=score; saveProgress(); memory.wordBadge=true; badge('#b_word', true); shuffleWord(); } }
+      $('#wshuffle').addEventListener('click', shuffleWord); $('#wclear').addEventListener('click', ()=>{ built=''; bEl.textContent=''; });
+      sEl.textContent=score; if(memory.wordBadge) badge('#b_word', true); shuffleWord();
+    })();
+
+    /* ============= B) MATH SPRINT ============= */
+    (function(){
+      let running=false, t=60, score=Number(memory.mscore||0), timer=null; const time=$('#time'), expr=$('#mexpr'), ans=$('#mans'), msg=$('#mmsg'); const sEl=$('#mscore'); sEl.textContent=score; function newQ(){ const a=rand(1,12), b=rand(1,12); const ops=['+','-','×']; const op=ops[rand(0,ops.length-1)]; const val = op==='+'?a+b: op==='-'?a-b: a*b; expr.textContent=`${a} ${op} ${b} = ?`; expr.dataset.val=val; }
+      function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+      $('#start').addEventListener('click', ()=>{ if(running) return; running=true; t=60; time.textContent=t; timer=setInterval(()=>{ t--; time.textContent=t; if(t<=0){ clearInterval(timer); running=false; msg.innerHTML=`<span class='ok'>Time!</span>`; memory.mathBadge = (score>=10); badge('#b_math', !!memory.mathBadge); saveProgress(); } },1000); newQ(); ans.focus(); msg.textContent=''; });
+      $('#skip').addEventListener('click', ()=>{ if(running) newQ(); });
+      ans.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && running){ const want=Number(expr.dataset.val); const got=Number(ans.value); if(got===want){ sEl.textContent=++score; memory.mscore=score; saveProgress(); msg.textContent='Great!'; newQ(); ans.value=''; } else { msg.textContent='Try again'; } } });
+      if(memory.mathBadge) badge('#b_math', true);
+    })();
+
+    /* ============= C) SCIENCE MATCH - REMOVED ============
+
+    /* ============= D) MEMORY FLIP ============= */
+    (function(){
+      const EM = ['🐱','🐶','🦊','🐸','🐼','🦁','🐷','🐵'];
+      let board=[], first=null, lock=false, moves=Number(memory.moves||0), matched=0; const movesEl=$('#moves'), msg=$('#mmmsg'), grid=$('#board'); movesEl.textContent=moves;
+      function init(){ const arr=[...EM,...EM]; arr.sort(()=>Math.random()-0.5); grid.innerHTML=''; board=arr.map((emoji,i)=>{ const d=document.createElement('div'); d.className='cardx'; d.dataset.idx=i; d.dataset.emoji=emoji; d.textContent='❓'; d.addEventListener('click', ()=>flip(d)); grid.appendChild(d); return d; }); first=null; lock=false; matched=0; msg.textContent=''; }
+      function flip(card){ if(lock||card.classList.contains('matched')||card.classList.contains('revealed')) return; card.classList.add('revealed'); card.textContent=card.dataset.emoji; if(!first){ first=card; return; } if(first.dataset.emoji===card.dataset.emoji){ first.classList.add('matched'); card.classList.add('matched'); first=null; matched+=1; if(matched===EM.length){ msg.innerHTML = `<span class='ok'>Solved!</span>`; memory.memBadge=true; badge('#b_mem', true); saveProgress(); }
+      } else { lock=true; setTimeout(()=>{ first.classList.remove('revealed'); card.classList.remove('revealed'); first.textContent='❓'; card.textContent='❓'; first=null; lock=false; moves++; movesEl.textContent=moves; memory.moves=moves; saveProgress(); }, 600); } }
+      $('#newboard').addEventListener('click', init);
+      init(); if(memory.memBadge) badge('#b_mem', true);
+    })();
+
+    /* ============= HELP + RESET ============= */
+    (function(){
+      const dlg=$('#helpdlg'); $('#help').addEventListener('click', ()=>{ dlg.showModal(); }); $('#closehelp').addEventListener('click', ()=>dlg.close());
+      $('#reset').addEventListener('click', ()=>{ localStorage.removeItem('ptl_progress'); location.reload(); });
+    })();
+  </script>
+</body>
+</html>

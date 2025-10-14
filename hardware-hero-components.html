@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Hero - Component Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .parts-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .parts-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .part-component {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .part-component:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .part-component:active {
+            cursor: grabbing;
+        }
+
+        .part-icon {
+            font-size: 24px;
+        }
+
+        .pc-builder {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .pc-case {
+            background: #2c3e50;
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 500px;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .motherboard {
+            background: #34495e;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            align-content: start;
+        }
+
+        .component-slot {
+            background: #2c3e50;
+            border: 2px dashed #7f8c8d;
+            border-radius: 10px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bdc3c7;
+            font-size: 14px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .component-slot.drag-over {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            transform: scale(1.05);
+        }
+
+        .component-slot.occupied {
+            border: 2px solid #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+            color: white;
+        }
+
+        .placed-component {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .progress-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .quiz-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+
+        .quiz-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .quiz-question {
+            margin: 20px 0;
+        }
+
+        .quiz-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .quiz-button:hover {
+            background: #2980b9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .motherboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖥️ Hardware Hero</h1>
+        <p>Build your dream PC with real components!</p>
+    </div>
+
+    <div class="game-container">
+        <div class="parts-panel">
+            <h2>Available Parts</h2>
+            <div id="parts-list">
+                <div class="part-component" draggable="true" data-part="cpu">
+                    <span class="part-icon">🧠</span>
+                    <div>
+                        <strong>Intel Core i9-13900K</strong>
+                      
+                    </div>
+                </div>
+                <div class="part-component" draggable="true" data-part="ram">
+                    <span class="part-icon">💾</span>
+                    <div>
+                        <strong>Corsair Vengeance 32GB</strong>
+                     
+                    </div>
+                </div>
+                <div class="part-component" draggable="true" data-part="gpu">
+                    <span class="part-icon">🎮</span>
+                    <div>
+                        <strong>NVIDIA RTX 4080</strong>
+                        
+                    </div>
+                </div>
+                <div class="part-component" draggable="true" data-part="ssd">
+                    <span class="part-icon">💿</span>
+                    <div>
+                        <strong>Samsung 980 Pro 2TB</strong>
+                        <br>
+                    </div>
+                </div>
+                <div class="part-component" draggable="true" data-part="psu">
+                    <span class="part-icon">⚡</span>
+                    <div>
+                        <strong>Corsair RM850x</strong>
+                       
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pc-builder">
+            <h2 style="text-align: center; margin-bottom: 20px;">PC Builder</h2>
+            <div class="pc-case">
+                <div class="motherboard">
+                    <div class="component-slot" data-slot="cpu">
+                        <span class="slot-label">CPU Socket</span>
+                    </div>
+                    <div class="component-slot" data-slot="ram">
+                        <span class="slot-label">RAM Slots</span>
+                    </div>
+                    <div class="component-slot" data-slot="gpu">
+                        <span class="slot-label">PCIe x16 Slot</span>
+                    </div>
+                    <div class="component-slot" data-slot="ssd">
+                        <span class="slot-label">M.2 Slot</span>
+                    </div>
+                    <div class="component-slot" data-slot="psu">
+                        <span class="slot-label">24-pin Power</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <h3>Build Progress</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p id="progress-text">0/5 components installed</p>
+    </div>
+
+    <div class="quiz-modal" id="quiz-modal">
+        <div class="quiz-content">
+            <h2>🧠 Hardware Knowledge Quiz</h2>
+            <div id="quiz-questions">
+                <div class="quiz-question">
+                    <p><strong>1. What is the primary function of a CPU?</strong></p>
+                    <button class="quiz-button" onclick="answerQuestion(1, true)">Process instructions and calculations</button>
+                    <button class="quiz-button" onclick="answerQuestion(1, false)">Store permanent data</button>
+                    <button class="quiz-button" onclick="answerQuestion(1, false)">Provide power to components</button>
+                </div>
+                <div class="quiz-question hidden">
+                    <p><strong>2. What advantage does DDR5 RAM have over DDR4?</strong></p>
+                    <button class="quiz-button" onclick="answerQuestion(2, false)">Lower speed</button>
+                    <button class="quiz-button" onclick="answerQuestion(2, true)">Higher bandwidth and efficiency</button>
+                    <button class="quiz-button" onclick="answerQuestion(2, false)">More storage capacity</button>
+                </div>
+                <div class="quiz-question hidden">
+                    <p><strong>3. Why are NVMe SSDs faster than traditional hard drives?</strong></p>
+                    <button class="quiz-button" onclick="answerQuestion(3, false)">They have more storage space</button>
+                    <button class="quiz-button" onclick="answerQuestion(3, true)">They use flash memory with direct PCIe connection</button>
+                    <button class="quiz-button" onclick="answerQuestion(3, false)">They consume less power</button>
+                </div>
+            </div>
+            <div id="quiz-complete" class="hidden">
+                <h3>🎉 Congratulations! You're a Hardware Hero!</h3>
+                <p>You've successfully built a high-end gaming PC and passed the knowledge test!</p>
+                <button class="quiz-button" onclick="resetBuild()">Build Another PC</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PCBuilder {
+            constructor() {
+                this.components = new Map();
+                this.totalSlots = 5;
+                this.filledSlots = 0;
+                this.init();
+            }
+
+            init() {
+                this.setupDragAndDrop();
+                this.updateProgress();
+            }
+
+            setupDragAndDrop() {
+                const parts = document.querySelectorAll('.part-component');
+                const slots = document.querySelectorAll('.component-slot');
+
+                parts.forEach(part => {
+                    part.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', part.dataset.part);
+                        e.dataTransfer.setData('text/html', part.innerHTML);
+                    });
+                });
+
+                slots.forEach(slot => {
+                    slot.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        slot.classList.add('drag-over');
+                    });
+
+                    slot.addEventListener('dragleave', () => {
+                        slot.classList.remove('drag-over');
+                    });
+
+                    slot.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        slot.classList.remove('drag-over');
+                        
+                        const partType = e.dataTransfer.getData('text/plain');
+                        const partHTML = e.dataTransfer.getData('text/html');
+                        const slotType = slot.dataset.slot;
+
+                        if (partType === slotType && !this.components.has(slotType)) {
+                            this.placeComponent(slot, partType, partHTML);
+                        } else if (this.components.has(slotType)) {
+                            alert('This slot already has a component!');
+                        } else {
+                            alert(`The ${partType.toUpperCase()} doesn't fit in the ${slotType.toUpperCase()} slot!`);
+                        }
+                    });
+                });
+            }
+
+            placeComponent(slot, partType, partHTML) {
+                slot.classList.add('occupied');
+                slot.innerHTML = `
+                    <div class="placed-component">
+                        ${partHTML}
+                    </div>
+                `;
+                
+                this.components.set(partType, true);
+                this.filledSlots++;
+                this.updateProgress();
+
+                // Remove from parts list
+                const partElement = document.querySelector(`[data-part="${partType}"]`);
+                if (partElement) {
+                    partElement.style.display = 'none';
+                }
+
+                if (this.filledSlots === this.totalSlots) {
+                    setTimeout(() => {
+                        document.getElementById('quiz-modal').style.display = 'block';
+                    }, 500);
+                }
+            }
+
+            updateProgress() {
+                const percentage = (this.filledSlots / this.totalSlots) * 100;
+                document.getElementById('progress-fill').style.width = `${percentage}%`;
+                document.getElementById('progress-text').textContent = 
+                    `${this.filledSlots}/${this.totalSlots} components installed`;
+            }
+
+            reset() {
+                this.components.clear();
+                this.filledSlots = 0;
+                
+                // Reset slots
+                document.querySelectorAll('.component-slot').forEach(slot => {
+                    slot.classList.remove('occupied');
+                    slot.innerHTML = `<span class="slot-label">${slot.dataset.slot.toUpperCase()} Slot</span>`;
+                });
+
+                // Show all parts
+                document.querySelectorAll('.part-component').forEach(part => {
+                    part.style.display = 'flex';
+                });
+
+                this.updateProgress();
+                document.getElementById('quiz-modal').style.display = 'none';
+                
+                // Reset quiz
+                document.querySelectorAll('.quiz-question').forEach((q, index) => {
+                    q.classList.toggle('hidden', index !== 0);
+                });
+                document.getElementById('quiz-complete').classList.add('hidden');
+            }
+        }
+
+        let currentQuestion = 1;
+        const totalQuestions = 3;
+
+        function answerQuestion(questionNum, correct) {
+            if (correct) {
+                if (questionNum < totalQuestions) {
+                    document.querySelectorAll('.quiz-question')[questionNum - 1].classList.add('hidden');
+                    document.querySelectorAll('.quiz-question')[questionNum].classList.remove('hidden');
+                    currentQuestion++;
+                } else {
+                    document.querySelectorAll('.quiz-question').forEach(q => q.classList.add('hidden'));
+                    document.getElementById('quiz-complete').classList.remove('hidden');
+                }
+            } else {
+                alert('Not quite right! Try again.');
+            }
+        }
+
+        function resetBuild() {
+            pcBuilder.reset();
+        }
+
+        const pcBuilder = new PCBuilder();
+    </script>
+</body>
+</html>

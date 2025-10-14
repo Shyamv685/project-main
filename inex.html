@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hardware Hero</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        #game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+
+        #parts, #pc {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            width: 300px;
+            min-height: 400px;
+            margin: 10px;
+            background-color: white;
+        }
+
+        .part {
+            margin: 10px;
+            padding: 10px;
+            background-color: #e0e0e0;
+            cursor: move;
+        }
+
+        .dropzone {
+            border: 2px dashed #888;
+            margin: 10px;
+            padding: 20px;
+            min-height: 50px;
+        }
+
+        #quiz {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🖥️ Hardware Hero – Build a Virtual Computer</h1>
+    <p>Drag the parts to the correct slots to build your PC.</p>
+
+    <div id="game-container">
+        <div id="parts">
+            <div class="part" draggable="true" id="cpu">CPU</div>
+            <div class="part" draggable="true" id="ram">RAM</div>
+            <div class="part" draggable="true" id="hdd">Hard Drive</div>
+        </div>
+
+        <div id="pc">
+            <div class="dropzone" data-accept="cpu">Drop CPU here</div>
+            <div class="dropzone" data-accept="ram">Drop RAM here</div>
+            <div class="dropzone" data-accept="hdd">Drop Hard Drive here</div>
+        </div>
+    </div>
+
+    <div id="quiz">
+        <h2>🧠 Quiz Time!</h2>
+        <p>1. What does the CPU do?</p>
+        <button onclick="alert('Correct! The CPU is the brain of the computer.')">Processes instructions</button><br><br>
+        <p>2. What is RAM used for?</p>
+        <button onclick="alert('Correct! RAM is temporary memory for active tasks.')">Temporary memory</button><br><br>
+        <p>3. What does the hard drive do?</p>
+        <button onclick="alert('Correct! It stores data permanently.')">Stores data</button><br><br>
+        <h3>🎉 You are a Hardware Hero!</h3>
+    </div>
+
+    <script>
+        const parts = document.querySelectorAll('.part');
+        const dropzones = document.querySelectorAll('.dropzone');
+        let placedCount = 0;
+
+        parts.forEach(part => {
+            part.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', part.id);
+            });
+        });
+
+        dropzones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+            });
+
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                const partId = e.dataTransfer.getData('text/plain');
+                const correct = zone.getAttribute('data-accept');
+                if (partId === correct) {
+                    zone.textContent = '';
+                    zone.appendChild(document.getElementById(partId));
+                    placedCount++;
+                    if (placedCount === 3) {
+                        document.getElementById('quiz').style.display = 'block';
+                    }
+                } else {
+                    alert("Oops! That's not the correct spot for " + partId.toUpperCase());
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,358 @@
+# AI-Forensics-Expo (Full Code)
+
+This single-file code document contains a small, **ready-to-run** expo project: an AI-assisted digital forensics demo that performs **automated evidence extraction** (text NER + regex) and **simple classification** (rule-based + TF-IDF classifier skeleton). The demo is intentionally lightweight so it can run on a laptop during an expo without heavy model downloads. It includes a Flask backend and a static frontend (HTML + JS).
+
+---
+
+=== README.md ===
+# AI-Driven Digital Forensics — Expo Demo
+
+## Summary
+A lightweight demo app that accepts text or image uploads and returns:
+- extracted evidence (emails, phone numbers, IPs, URLs, dates, money mentions)
+- NLP named entities (PERSON, ORG, GPE)
+- a simple classification of the content into categories (Fraud, Harassment, Malware, Normal)
+
+This is built for an expo: interactive, simple, and extendable.
+
+## Files in this repo (contained in this single document)
+- backend/requirements.txt
+- backend/app.py
+- backend/sample_training_data.json
+- frontend/index.html
+- frontend/script.js
+- README.md (this)
+
+## How to run (Linux/macOS/Windows WSL)
+1. Install Python 3.9+ and pip.
+2. Create a virtualenv (recommended):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate   # or venv\Scripts\activate on Windows
+   ```
+3. Install backend dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   python -m spacy download en_core_web_sm
+   ```
+4. Start the backend:
+   ```bash
+   python backend/app.py
+   ```
+   Backend will run at http://127.0.0.1:5000
+5. Open the frontend: open `frontend/index.html` in a web browser (file://) or serve it with a static server. The frontend communicates with the backend at http://127.0.0.1:5000.
+
+## Expo usage
+- Upload a text file or paste text. Click "Analyze". The dashboard shows extracted evidence, classification, and a timeline summary.
+
+---
+
+=== backend/requirements.txt ===
+Flask==2.2.5
+spacy==3.5.2
+scikit-learn==1.2.2
+werkzeug==2.2.3
+python-magic==0.4.27
+tqdm==4.65.0
+
+# Optional (image OCR) - only if you have tesseract installed
+pytesseract==0.3.10
+Pillow==9.5.0
+
+=== backend/sample_training_data.json ===
+[
+  {"text": "Transfer \$5000 to account 1234567890", "label": "Fraud"},
+  {"text": "I will find you and hurt you", "label": "Harassment"},
+  {"text": "Detected unknown executable and C2 beaconing", "label": "Malware"},
+  {"text": "Let's meet tomorrow at the mall", "label": "Normal"},
+  {"text": "Call me at +91-9876543210 about the payment", "label": "Fraud"}
+]
+
+=== backend/app.py ===
+#!/usr/bin/env python3
+from flask import Flask, request, jsonify, send_from_directory
+import re
+import os
+import json
+from pathlib import Path
+import magic
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import make_pipeline
+
+BASE_DIR = Path(__file__).resolve().parent
+nlp = spacy.load("en_core_web_sm")
+
+app = Flask(__name__, static_folder=str(BASE_DIR.parent / "frontend"))
+
+# Load sample training data and train a simple TF-IDF + NB classifier on startup
+TRAIN_FILE = BASE_DIR / "sample_training_data.json"
+if TRAIN_FILE.exists():
+    with TRAIN_FILE.open() as f:
+        samples = json.load(f)
+else:
+    samples = []
+
+texts = [s['text'] for s in samples]
+labels = [s['label'] for s in samples]
+
+classifier = None
+if texts and labels:
+    clf = make_pipeline(TfidfVectorizer(), MultinomialNB())
+    clf.fit(texts, labels)
+    classifier = clf
+
+# Regex patterns for quick evidence extraction
+EMAIL_RE = re.compile(r"[\w\.-]+@[\w\.-]+")
+PHONE_RE = re.compile(r"\+?\d[\d\-\s]{7,}\d")
+IP_RE = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
+URL_RE = re.compile(r"https?://[\w\./\-_%?=&]+")
+MONEY_RE = re.compile(r"\$\s?\d+[\d,]*(\.\d+)?|\d+[\d,]*\s?(?:USD|INR|Rs\.?|₹)")
+DATE_RE = re.compile(r"\b(?:\d{1,2}[\-/]\d{1,2}[\-/]\d{2,4}|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})")
+
+
+def extract_evidence_from_text(text):
+    evidence = {}
+    evidence['emails'] = EMAIL_RE.findall(text)
+    evidence['phones'] = PHONE_RE.findall(text)
+    evidence['ips'] = IP_RE.findall(text)
+    evidence['urls'] = URL_RE.findall(text)
+    evidence['money'] = MONEY_RE.findall(text)
+    evidence['dates'] = DATE_RE.findall(text)
+
+    # spaCy NER for persons/orgs/locations
+    doc = nlp(text)
+    ents = {'PERSON': [], 'ORG': [], 'GPE': []}
+    for ent in doc.ents:
+        if ent.label_ in ents:
+            ents[ent.label_].append(ent.text)
+    evidence['entities'] = ents
+    return evidence
+
+
+def classify_text(text):
+    # Prefer trained classifier if available
+    if classifier:
+        pred = classifier.predict([text])[0]
+        proba = classifier.predict_proba([text])[0].max()
+        return {'label': pred, 'confidence': float(proba)}
+
+    # Fallback: tiny rule-based classifier
+    text_l = text.lower()
+    if any(tok in text_l for tok in ['transfer', 'account', 'withdraw', 'payment', 'bank']):
+        return {'label': 'Fraud', 'confidence': 0.6}
+    if any(tok in text_l for tok in ['kill', 'hurt', 'threat']):
+        return {'label': 'Harassment', 'confidence': 0.7}
+    if any(tok in text_l for tok in ['malware', 'c2', 'exploit', 'ransom']):
+        return {'label': 'Malware', 'confidence': 0.8}
+    return {'label': 'Normal', 'confidence': 0.6}
+
+
+@app.route('/api/analyze_text', methods=['POST'])
+def api_analyze_text():
+    data = request.json
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+
+    evidence = extract_evidence_from_text(text)
+    classification = classify_text(text)
+    # simple scoring for priority
+    priority_score = len(evidence['emails']) + len(evidence['phones']) + len(evidence['money'])
+
+    response = {
+        'evidence': evidence,
+        'classification': classification,
+        'priority_score': priority_score,
+        'summary': f"Found {sum(len(v) for v in evidence['entities'].values())} named entities and {priority_score} high-value hits"
+    }
+    return jsonify(response)
+
+
+@app.route('/api/analyze_file', methods=['POST'])
+def api_analyze_file():
+    # Accepts file upload and performs text extraction (if possible) then calls text analysis
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    f = request.files['file']
+    data = f.read()
+    mime = magic.from_buffer(data, mime=True)
+    text = ''
+    # If text-like
+    if mime and (mime.startswith('text') or 'json' in mime):
+        try:
+            text = data.decode('utf-8', errors='ignore')
+        except:
+            text = ''
+    # If image and pytesseract available, do OCR (optional)
+    elif mime and mime.startswith('image'):
+        try:
+            from PIL import Image
+            import io
+            import pytesseract
+            img = Image.open(io.BytesIO(data))
+            text = pytesseract.image_to_string(img)
+        except Exception as e:
+            # OCR not available or failed
+            text = ''
+    # else: binary file -> no text
+
+    if not text:
+        return jsonify({'error': 'No readable text found in file (try uploading .txt or image with pytesseract installed)'}), 400
+
+    evidence = extract_evidence_from_text(text)
+    classification = classify_text(text)
+    priority_score = len(evidence['emails']) + len(evidence['phones']) + len(evidence['money'])
+    response = {
+        'evidence': evidence,
+        'classification': classification,
+        'priority_score': priority_score,
+        'summary': f"Found {sum(len(v) for v in evidence['entities'].values())} named entities and {priority_score} high-value hits"
+    }
+    return jsonify(response)
+
+
+# Serve frontend static files
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    # If running from file:// frontend, this isn't used. But included for completeness.
+    if path != "" and (BASE_DIR.parent / 'frontend' / path).exists():
+        return send_from_directory(str(BASE_DIR.parent / 'frontend'), path)
+    return send_from_directory(str(BASE_DIR.parent / 'frontend'), 'index.html')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+=== frontend/index.html ===
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Forensics Expo Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; background:#f7f9fc }
+    .container{max-width:900px;margin:0 auto;background:white;padding:18px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.05)}
+    textarea{width:100%;height:160px;padding:10px}
+    .row{display:flex;gap:12px;margin-top:12px}
+    .card{flex:1;padding:12px;border-radius:8px;border:1px solid #eee;background:#fff}
+    pre{white-space:pre-wrap}
+    .badge{display:inline-block;padding:6px 8px;border-radius:999px;background:#eee;margin-right:6px}
+    .danger{color:#7b1e1e}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>AI-Driven Digital Forensics — Expo Demo</h2>
+    <p>Paste suspicious text or upload a file (.txt or image). Click <strong>Analyze</strong>.</p>
+
+    <label>Paste text</label>
+    <textarea id="inputText" placeholder="Paste suspicious email contents, chat logs, or notes here..."></textarea>
+
+    <div style="margin-top:10px">
+      <label>Or upload file (.txt / image with OCR)</label>
+      <input id="fileInput" type="file" />
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button id="analyzeTextBtn">Analyze Text</button>
+      <button id="analyzeFileBtn">Analyze File</button>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <div class="card" id="resultCard">
+        <h3>Results</h3>
+        <div id="summary">No analysis yet.</div>
+        <hr />
+        <div id="classification"></div>
+        <h4>Extracted Evidence</h4>
+        <div id="evidence"></div>
+        <h4>Entities</h4>
+        <div id="entities"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
+=== frontend/script.js ===
+const API_BASE = 'http://127.0.0.1:5000/api'
+
+async function postJson(url, payload){
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  return res.json()
+}
+
+async function analyzeText(){
+  const text = document.getElementById('inputText').value
+  if(!text.trim()) return alert('Please paste some text first')
+  document.getElementById('summary').innerText = 'Analyzing...'
+  try{
+    const result = await postJson(API_BASE + '/analyze_text', {text})
+    showResult(result)
+  }catch(e){
+    alert('Error calling API: ' + e)
+  }
+}
+
+async function analyzeFile(){
+  const fileInput = document.getElementById('fileInput')
+  if(!fileInput.files.length) return alert('Please choose a file to upload')
+  const file = fileInput.files[0]
+  const fd = new FormData()
+  fd.append('file', file)
+  document.getElementById('summary').innerText = 'Uploading and analyzing file...'
+  try{
+    const res = await fetch(API_BASE + '/analyze_file', {method: 'POST', body: fd})
+    const result = await res.json()
+    if(res.ok) showResult(result)
+    else alert(result.error || 'File analysis failed')
+  }catch(e){
+    alert('Error calling API: ' + e)
+  }
+}
+
+function showResult(result){
+  document.getElementById('summary').innerText = result.summary || ''
+  const classDiv = document.getElementById('classification')
+  classDiv.innerHTML = `<strong>Classification:</strong> ${result.classification.label} (confidence: ${result.classification.confidence.toFixed(2)})`
+
+  const ev = result.evidence
+  const evidenceDiv = document.getElementById('evidence')
+  evidenceDiv.innerHTML = ''
+  for(const k of ['emails','phones','ips','urls','money','dates']){
+    if(ev[k] && ev[k].length){
+      const node = document.createElement('div')
+      node.innerHTML = `<strong>${k}:</strong> ${ev[k].map(x=>`<span class="badge">${escapeHtml(x)}</span>`).join(' ')}`
+      evidenceDiv.appendChild(node)
+    }
+  }
+
+  const ents = result.evidence.entities
+  const entDiv = document.getElementById('entities')
+  entDiv.innerHTML = ''
+  for(const k of ['PERSON','ORG','GPE']){
+    if(ents[k] && ents[k].length){
+      const node = document.createElement('div')
+      node.innerHTML = `<strong>${k}:</strong> ${ents[k].map(x=>`<span class="badge">${escapeHtml(x)}</span>`).join(' ')}`
+      entDiv.appendChild(node)
+    }
+  }
+}
+
+function escapeHtml(s){ return s.replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]) }
+
+document.getElementById('analyzeTextBtn').addEventListener('click', analyzeText)
+document.getElementById('analyzeFileBtn').addEventListener('click', analyzeFile)
+
+
+=== END OF DOCUMENT ===

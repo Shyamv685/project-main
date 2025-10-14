@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AI-Driven Digital Forensics Analysis Tool" />
+  <title>AI Forensics Expo Demo</title>
+  <link rel="stylesheet" href="responsive.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="card">
+      <h1>AI-Driven Digital Forensics</h1>
+      <p class="subtitle">Expo Demo - Analyze suspicious text and files with AI</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Input Analysis</h2>
+        
+        <div class="input-group">
+          <label for="inputText">Paste suspicious text</label>
+          <textarea 
+            id="inputText" 
+            placeholder="Paste suspicious email contents, chat logs, or notes here..."
+            aria-label="Text input for analysis"
+          ></textarea>
+        </div>
+
+        <div class="input-group">
+          <label for="fileInput">Or upload a file</label>
+          <input 
+            id="fileInput" 
+            type="file" 
+            accept=".txt,.jpg,.jpeg,.png,.gif,.bmp,.tiff"
+            aria-label="File upload for analysis"
+          />
+          <small class="help-text">Supported: .txt, .json, images (with OCR)</small>
+        </div>
+
+        <div class="row">
+          <button id="analyzeTextBtn" type="button">
+            <span>Analyze Text</span>
+          </button>
+          <button id="analyzeFileBtn" type="button">
+            <span>Analyze File</span>
+          </button>
+          <button id="clearBtn" type="button" class="secondary">
+            <span>Clear All</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card" id="results-section">
+        <h2>Analysis Results</h2>
+        
+        <div id="summary" class="result-section">
+          <p>No analysis yet. Enter text or upload a file to begin.</p>
+        </div>
+
+        <div id="classification" class="result-section">
+          <!-- Classification results will appear here -->
+        </div>
+
+        <div id="evidence" class="result-section">
+          <h3>Extracted Evidence</h3>
+          <div id="evidence-content">
+            <!-- Evidence will appear here -->
+          </div>
+        </div>
+
+        <div id="entities" class="result-section">
+          <h3>Identified Entities</h3>
+          <div id="entities-content">
+            <!-- Entities will appear here -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

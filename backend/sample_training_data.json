@@ -1,0 +1,12 @@
+[
+  {"text": "Transfer $5000 to account 1234567890", "label": "Fraud"},
+  {"text": "I will find you and hurt you", "label": "Harassment"},
+  {"text": "Detected unknown executable and C2 beaconing", "label": "Malware"},
+  {"text": "Let's meet tomorrow at the mall", "label": "Normal"},
+  {"text": "Call me at +91-9876543210 about the payment", "label": "Fraud"},
+  {"text": "Your account has been compromised. Please verify your password immediately", "label": "Fraud"},
+  {"text": "Send me your credit card details for verification", "label": "Fraud"},
+  {"text": "I know where you live and I'm coming for you", "label": "Harassment"},
+  {"text": "This ransomware will encrypt all your files", "label": "Malware"},
+  {"text": "The meeting is scheduled for 3 PM tomorrow", "label": "Normal"}
+]

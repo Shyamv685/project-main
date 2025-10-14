@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Math Carnival – Learning Numbers the Fun Way</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --accent2:#38bdf8; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box} body{
+    margin:0; font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif; color:var(--ink); background:linear-gradient(135deg,#0b1229,#0c1a33 40%,#0b223d);
+    min-height:100vh; display:flex; flex-direction:column; gap:16px;
+  }
+  header{padding:18px; text-align:center; }
+  header h1{margin:0 0 6px; font-size:clamp(22px,3vw,34px)}
+  header p{margin:0; color:var(--muted)}
+  .wrap{max-width:1100px; margin:0 auto; width:100%; padding:0 14px 40px}
+  nav{
+    display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:8px auto 4px;
+  }
+  nav button{
+    border:0; padding:10px 14px; border-radius:999px; cursor:pointer; color:#07131a; background:#d1fae5; font-weight:600; transition:.2s;
+  }
+  nav button[data-active="true"]{ background:var(--accent); color:#06220f; transform:translateY(-1px)}
+  .grid{display:grid; gap:16px; grid-template-columns:1fr}
+  @media(min-width:900px){ .grid{grid-template-columns:1fr 320px} }
+  .card{
+    background:linear-gradient(180deg, #0e162c, #0c1426 70%); border:1px solid #1f2a44; border-radius:18px; padding:16px; box-shadow:0 10px 30px rgb(0 0 0 / .25);
+  }
+  .card h2{margin:.2rem 0 .6rem; font-size:20px}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .tag{background:#0b2430; color:#a5f3fc; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid #1e3753}
+  .big{font-size:clamp(26px,4.5vw,40px); font-weight:800; letter-spacing:.5px}
+  .qbox{display:flex; align-items:center; justify-content:center; min-height:110px; border-radius:14px; background:#0a1e2a; border:1px dashed #1f3346; padding:6px}
+  .answers{display:grid; grid-template-columns:repeat(2,minmax(120px,1fr)); gap:10px; margin-top:12px}
+  .answers button{
+    border:1px solid #1f2a44; background:#0d1b2f; color:var(--ink); padding:12px; border-radius:12px; font-size:18px; cursor:pointer; transition:.15s;
+  }
+  .answers button:hover{transform:translateY(-2px)}
+  .answers button.correct{background:#0f3a2a; border-color:#1e6b4b}
+  .answers button.wrong{background:#3a1212; border-color:#812828}
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0c2131; border:1px solid #1f3650; color:#cbd5e1; font-weight:600}
+  .pill .dot{width:8px; height:8px; border-radius:50%}
+  .accent{color:#86efac}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  .side .card{position:sticky; top:14px}
+  .btn{
+    border:0; background:var(--accent2); color:#012034; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer;
+  }
+  .btn.secondary{background:#0d2133; color:#e2e8f0; border:1px solid #1e3753}
+  input,select{background:#0b1b2b; border:1px solid #1f2a44; color:var(--ink); padding:8px 10px; border-radius:10px}
+  .table-output{background:#081726; border:1px solid #1a2a3d; border-radius:12px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre-wrap}
+  .drag-area{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .chip{background:#0d1f31; border:1px solid #1e3753; padding:8px 10px; border-radius:12px; cursor:grab; user-select:none}
+  .slots{display:grid; grid-template-columns:repeat(5,minmax(46px,1fr)); gap:8px; margin-top:12px}
+  .slot{min-height:44px; display:flex; align-items:center; justify-content:center; background:#0a1e2a; border:1px dashed #1f2a44; border-radius:10px}
+  .good{color:#86efac} .bad{color:#fca5a5}
+  footer{padding:20px; text-align:center; color:var(--muted); font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎪 Math Carnival – Learning Numbers the Fun Way</h1>
+  <p>Quick games that build number sense, speed, and confidence. Score points, beat the timer, and explore times tables!</p>
+</header>
+
+<div class="wrap">
+  <nav id="tabs"></nav>
+
+  <div class="grid">
+    <!-- Main stage -->
+    <section id="stage" class="card"></section>
+
+    <!-- Sidebar -->
+    <aside class="side">
+      <div class="card">
+        <h2>🎯 Scoreboard</h2>
+        <div class="row">
+          <span class="pill"><span class="dot" style="background:var(--accent)"></span>Score: <span id="score">0</span></span>
+          <span class="pill"><span class="dot" style="background:var(--warn)"></span>Time: <span id="time">60</span>s</span>
+          <span class="pill"><span class="dot" style="background:var(--bad)"></span>Strikes: <span id="strikes">0</span>/3</span>
+        </div>
+        <div style="margin-top:10px" class="row">
+          <button class="btn" id="playBtn">▶ Start</button>
+          <button class="btn secondary" id="resetBtn">↺ Reset</button>
+        </div>
+        <hr style="border:0;border-top:1px solid #1f2a44; margin:12px 0">
+        <div class="small muted">Tip: Choose a game tab, press Start, and keep answering to chain streaks for bonus points!</div>
+      </div>
+
+      <div class="card">
+        <h2>🧮 Times Tables Explorer</h2>
+        <div class="row" style="gap:8px">
+          <label for="tableN">Table of</label>
+          <select id="tableN"></select>
+          <label for="tableUpto">× up to</label>
+          <select id="tableUpto"></select>
+          <button class="btn" id="genTable">Generate</button>
+        </div>
+        <div id="tableOut" class="table-output" style="margin-top:10px; min-height:100px"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn secondary" id="quizTable">Start Table Quiz</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🏆 High Scores</h2>
+        <div id="hiscore" class="muted small">No scores yet. Play a round!</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>Made for school expos — works offline, no libraries needed.</footer>
+
+<script>
+/* ---------- Utilities ---------- */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const rand = (min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+const shuffle = a => a.sort(()=>Math.random()-.5);
+
+/* ---------- Game State ---------- */
+const GAMES = [
+  { id:'quick-math', name:'⚡ Quick Math (Add/Sub)', setup:setupQuickMath, next:nextQuickMath },
+  { id:'times-rush', name:'✖️ Times Rush', setup:setupTimesRush, next:nextTimesRush },
+  { id:'number-line', name:'📏 Number Line Drop', setup:setupNumberLine, next:nextNumberLine },
+];
+let current = GAMES[0].id;
+let score=0, strikes=0, timeLeft=60, timer=null, streak=0, inPlay=false;
+
+/* ---------- Tabs ---------- */
+const tabs = $("#tabs");
+GAMES.forEach(g=>{
+  const b=document.createElement('button');
+  b.textContent=g.name; b.dataset.id=g.id;
+  b.onclick=()=>switchGame(g.id);
+  tabs.appendChild(b);
+});
+function switchGame(id){
+  current=id; renderStage();
+  $$("#tabs button").forEach(b=>b.dataset.active = (b.dataset.id===id));
+}
+$$("#tabs button")[0].dataset.active="true";
+
+/* ---------- Stage Rendering ---------- */
+const stage=$("#stage");
+function renderStage(){
+  stage.innerHTML="";
+  const g = GAMES.find(x=>x.id===current);
+  const h=document.createElement('h2'); h.textContent=g.name; stage.appendChild(h);
+  g.setup(stage);
+}
+
+/* ---------- Scoreboard & Timer ---------- */
+function reset(run=false){
+  score=0; strikes=0; timeLeft=60; streak=0; inPlay=false;
+  updateHUD(); clearInterval(timer); if(run) start();
+}
+function updateHUD(){
+  $("#score").textContent=score;
+  $("#strikes").textContent=strikes;
+  $("#time").textContent=timeLeft;
+}
+function start(){
+  if(inPlay) return;
+  inPlay=true;
+  const g = GAMES.find(x=>x.id===current);
+  g.next(); // first question
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    timeLeft--; updateHUD();
+    if(timeLeft<=0){ endRound("⏰ Time up!"); }
+  },1000);
+}
+function endRound(msg){
+  inPlay=false; clearInterval(timer);
+  toast(`${msg} Final score: <b>${score}</b>`);
+  saveHiScore(score);
+}
+$("#playBtn").onclick=()=>start();
+$("#resetBtn").onclick=()=>reset(false);
+
+/* ---------- Toast ---------- */
+function toast(html){
+  const t=document.createElement('div');
+  t.innerHTML=html;
+  Object.assign(t.style,{position:'fixed',left:'50%',top:'16px',transform:'translateX(-50%)',
+    background:'#0b2430',border:'1px solid #1e3753',padding:'10px 14px',borderRadius:'12px',
+    color:'#e2e8f0',zIndex:99, boxShadow:'0 10px 20px rgba(0,0,0,.3)'});
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2600);
+}
+
+/* ---------- High Scores ---------- */
+const HS_KEY="math-carnival-hiscore";
+function loadHiScores(){ try{ return JSON.parse(localStorage.getItem(HS_KEY)||"[]"); }catch{ return []; } }
+function saveHiScore(s){
+  const list=loadHiScores();
+  const name = prompt("Enter your name for the leaderboard:", "Player");
+  list.push({name:name||"Player", score:s, date:new Date().toLocaleDateString()});
+  list.sort((a,b)=>b.score-a.score); if(list.length>8) list.length=8;
+  localStorage.setItem(HS_KEY, JSON.stringify(list));
+  renderHiScores();
+}
+function renderHiScores(){
+  const list=loadHiScores();
+  if(!list.length){ $("#hiscore").textContent="No scores yet. Play a round!"; return; }
+  $("#hiscore").innerHTML = list.map((r,i)=>`${i+1}. <span class="good">${r.score}</span> — ${r.name} <span class="muted">(${r.date})</span>`).join("<br>");
+}
+renderHiScores();
+
+/* ---------- Game 1: Quick Math (Add/Sub) ---------- */
+let qm = {a:0,b:0,op:"+",choices:[]};
+function setupQuickMath(root){
+  const box=document.createElement('div'); box.className="qbox big"; box.id="qm-q"; box.textContent="Press Start!";
+  const answers=document.createElement('div'); answers.className="answers"; answers.id="qm-a";
+  root.append(box,answers);
+}
+function nextQuickMath(){
+  const a=rand(0,50), b=rand(0,50);
+  const op = Math.random()<0.5?"+":"-";
+  const target = op==="+"? a+b : a-b;
+  qm={a,b,op, choices:genChoices(target,4, -10, 10)};
+  $("#qm-q").innerHTML = `<span class="accent">${a}</span> ${op} <span class="accent">${b}</span> = ?`;
+  renderChoices("#qm-a", qm.choices, target);
+}
+function genChoices(answer,count, minDelta=-7, maxDelta=7){
+  const set=new Set([answer]);
+  while(set.size<count){
+    const n = answer + rand(minDelta,maxDelta);
+    if(n!==answer) set.add(n);
+  }
+  return shuffle([...set]);
+}
+function renderChoices(sel, arr, answer){
+  const box=$(sel); box.innerHTML="";
+  arr.forEach(v=>{
+    const btn=document.createElement('button'); btn.textContent=v;
+    btn.onclick=()=>pick(btn, v===answer);
+    box.appendChild(btn);
+  });
+}
+function pick(btn, ok){
+  if(!inPlay) return;
+  if(ok){
+    streak++; const bonus = 10 + Math.max(0, (streak-1)*2);
+    score += bonus; btn.classList.add('correct');
+    setTimeout(()=>{ const g=GAMES.find(x=>x.id===current); g.next(); updateHUD(); },220);
+  } else {
+    streak=0; strikes++; btn.classList.add('wrong'); updateHUD();
+    if(strikes>=3) endRound("💥 3 strikes!");
+  }
+}
+
+/* ---------- Game 2: Times Rush (Multiplication) ---------- */
+let tr = {a:0,b:0,choices:[]};
+function setupTimesRush(root){
+  const ctrl=document.createElement('div'); ctrl.className="row";
+  ctrl.innerHTML = `
+    <label>Table range:</label>
+    <select id="trMin"></select><span class="muted">to</span><select id="trMax"></select>
+    <label>Max factor:</label><select id="trCap"></select>
+  `;
+  root.appendChild(ctrl);
+  [ "#trMin","#trMax","#trCap" ].forEach((id,i)=>{
+    const el=$(id); for(let k=1;k<=12;k++){ const o=document.createElement('option'); o.value=k; o.text=k; el.appendChild(o); }
+    if(i===0) el.value=2; if(i===1) el.value=9; if(i===2) el.value=12;
+  });
+  const q=document.createElement('div'); q.className="qbox big"; q.id="tr-q"; q.textContent="Press Start!"; root.appendChild(q);
+  const a=document.createElement('div'); a.className="answers"; a.id="tr-a"; root.appendChild(a);
+
+  // update config live during round
+  ["trMin","trMax","trCap"].forEach(id => $( "#"+id ).addEventListener('change', ()=>{ if(inPlay && current==='times-rush'){ nextTimesRush(); } }));
+}
+function nextTimesRush(){
+  const min=+$("#trMin").value, max=+$("#trMax").value, cap=+$("#trCap").value;
+  const table = rand(min, max);
+  const b = rand(1, cap);
+  const ans = table*b; tr={a:table, b, choices:genChoices(ans,4, -12, 12)};
+  $("#tr-q").innerHTML = `<span class="accent">${table}</span> × <span class="accent">${b}</span> = ?`;
+  renderChoices("#tr-a", tr.choices, ans);
+}
+
+/* ---------- Game 3: Number Line Drop (Ordering) ---------- */
+let nl = { pool:[], target:[], size:5 };
+function setupNumberLine(root){
+  const row=document.createElement('div'); row.className="row";
+  row.innerHTML=`<label>Range:</label>
+    <select id="nlFrom"></select><span class="muted">to</span><select id="nlTo"></select>
+    <label>Count:</label><select id="nlCount"></select>`;
+  root.appendChild(row);
+
+  const q=document.createElement('div'); q.className="qbox"; q.innerHTML=`
+    <div class="muted">Drag the numbers into <b>ascending order</b></div>
+    <div class="drag-area" id="nl-pool"></div>
+    <div class="slots" id="nl-slots"></div>`;
+  root.appendChild(q);
+
+  // populate controls
+  for(let i=-20;i<=20;i+=5){ const o=document.createElement('option'); o.value=i; o.text=i; $("#nlFrom").appendChild(o.cloneNode(true)); $("#nlTo").appendChild(o); }
+  $("#nlFrom").value=-10; $("#nlTo").value=20;
+  [3,4,5,6,7].forEach(n=>{ const o=document.createElement('option'); o.value=n; o.text=n; $("#nlCount").appendChild(o); });
+  $("#nlCount").value=5;
+
+  ["nlFrom","nlTo","nlCount"].forEach(id => $("#"+id).addEventListener('change', ()=>{ if(inPlay && current==='number-line'){ nextNumberLine(); }}));
+}
+function nextNumberLine(){
+  const from=+$("#nlFrom").value, to=+$("#nlTo").value, count=+$("#nlCount").value;
+  const nums=new Set(); while(nums.size<count){ nums.add(rand(from,to)); }
+  nl.pool = shuffle([...nums]); nl.target=[...nl.pool].sort((a,b)=>a-b); nl.size=count;
+
+  const pool=$("#nl-pool"); pool.innerHTML="";
+  nl.pool.forEach(n=>{
+    const chip=document.createElement('div'); chip.textContent=n; chip.className="chip"; chip.draggable=true;
+    chip.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', n); e.dataTransfer.effectAllowed='move'; chip.classList.add('muted'); });
+    chip.addEventListener('dragend', ()=>chip.classList.remove('muted'));
+    pool.appendChild(chip);
+  });
+
+  const slots=$("#nl-slots"); slots.innerHTML="";
+  for(let i=0;i<nl.size;i++){
+    const s=document.createElement('div'); s.className='slot'; s.dataset.index=i;
+    s.addEventListener('dragover', e=>{ e.preventDefault(); s.style.outline='2px solid #1e3753'; });
+    s.addEventListener('dragleave', ()=> s.style.outline='none');
+    s.addEventListener('drop', e=>{
+      e.preventDefault(); s.style.outline='none';
+      const val=+e.dataTransfer.getData('text/plain');
+      s.textContent=val; s.dataset.value=val; s.style.borderStyle='solid';
+      checkNL();
+    });
+    slots.appendChild(s);
+  }
+}
+function checkNL(){
+  const vals = $$('.slot').map(s=>+s.dataset.value).filter(v=>!Number.isNaN(v));
+  if(vals.length<nl.size) return;
+  const correct = vals.every((v,i)=>v===nl.target[i]);
+  if(correct){
+    streak++; score += 20 + (streak*3); updateHUD();
+    toast('✅ Correct order! + points');
+    const g=GAMES.find(x=>x.id===current); setTimeout(()=>g.next(),400);
+  } else {
+    streak=0; strikes++; updateHUD();
+    toast('❌ Not quite, try the next one!');
+    const g=GAMES.find(x=>x.id===current); setTimeout(()=>g.next(),400);
+    if(strikes>=3) endRound("💥 3 strikes!");
+  }
+}
+
+/* ---------- Times Tables Explorer + Quiz ---------- */
+const tableN=$("#tableN"), tableUpto=$("#tableUpto");
+for(let i=1;i<=20;i++){ const o=document.createElement('option'); o.value=i; o.text=i; tableN.appendChild(o); }
+for(let i=5;i<=20;i++){ const o=document.createElement('option'); o.value=i; o.text=i; tableUpto.appendChild(o); }
+tableN.value=2; tableUpto.value=12;
+
+$("#genTable").onclick=()=>{
+  const n=+tableN.value, up=+tableUpto.value;
+  $("#tableOut").textContent = [...Array(up)].map((_,i)=>`${n} × ${i+1} = ${n*(i+1)}`).join('\n');
+};
+$("#quizTable").onclick=()=>{
+  // a focused 30s mini-quiz based on selected table
+  if(inPlay){ toast('Finish current round first.'); return; }
+  let t=30, pts=0, n=+tableN.value, up=+tableUpto.value;
+  const ask=()=> {
+    const k=rand(1,up), ans=n*k;
+    const choices=genChoices(ans,4,-12,12);
+    stage.innerHTML = `<h2>🎯 ${n} Times Table – 30s Quiz</h2>
+      <div class="qbox big">${n} × <span class="accent">${k}</span> = ?</div>
+      <div class="answers" id="tt-ans"></div>
+      <div class="muted small">Time left: <b id="tt-time">${t}</b>s • Score: <b>${pts}</b></div>`;
+    const box=$("#tt-ans");
+    choices.forEach(c=>{
+      const b=document.createElement('button'); b.textContent=c;
+      b.onclick=()=>{ if(c===ans){ pts+=10; ask(); } else { pts=Math.max(0,pts-5); ask(); } };
+      box.appendChild(b);
+    });
+  };
+  ask();
+  const tick=setInterval(()=>{
+    t--; const el=$("#tt-time"); if(el) el.textContent=t;
+    if(t<=0){ clearInterval(tick); toast(`⏱️ Quiz over! You scored <b>${pts}</b>`); saveHiScore(pts); renderStage(); }
+  },1000);
+};
+
+/* ---------- Wire up initial view ---------- */
+renderStage();
+
+/* ---------- Hook global key (1-4 to pick answers fast) ---------- */
+document.addEventListener('keydown', e=>{
+  if(!inPlay) return;
+  const idx = ({'1':0,'2':1,'3':2,'4':3})[e.key];
+  if(idx==null) return;
+  const visibleAnswers = $$('.answers', stage)[0];
+  if(!visibleAnswers) return;
+  const btn = visibleAnswers.children[idx];
+  if(btn) btn.click();
+});
+</script>
+</body>
+</html>
