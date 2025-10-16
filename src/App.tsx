@@ -15,6 +15,8 @@ import Candidates from "./pages/Candidates";
 import CareerSite from "./pages/CareerSite";
 import Structure from "./pages/Structure";
 import Meeting from "./pages/Meeting";
+import Settings from "./pages/Settings";
+import HelpCentre from "./pages/HelpCentre";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -39,6 +41,8 @@ function App() {
           <Route path="career-site" element={<CareerSite />} />
           <Route path="structure" element={<Structure />} />
           <Route path="meeting" element={<Meeting />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="help-centre" element={<HelpCentre />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
