@@ -110,4 +110,87 @@ export const api = {
     }
     return response.json();
   },
+  getTripets: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/tripets`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch tripets');
+    }
+    return response.json();
+  },
+  createTripet: async (data: {
+    destination: string;
+    purpose: string;
+    startDate: string;
+    endDate: string;
+    accommodation?: string;
+    transportation?: string;
+  }) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/tripets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create tripet');
+    }
+    return response.json();
+  },
+  updateTripet: async (id: number, data: any) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/tripets/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update tripet');
+    }
+    return response.json();
+  },
+  deleteTripet: async (id: number) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/tripets/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete tripet');
+    }
+    return response.json();
+  },
 };

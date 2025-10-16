@@ -10,25 +10,29 @@ interface SidebarMenuProps {
 
 const allMenuItems = [
   { icon: Icons.LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["hr", "employee"] },
-  { icon: Icons.Inbox, label: "Inbox", path: "/inbox", roles: ["hr"] },
+  { icon: Icons.User, label: "Profile", path: "/profile", roles: ["employee"] },
+  { icon: Icons.Inbox, label: "Inbox", path: "/inbox", roles: ["hr", "employee"] },
   { icon: Icons.Calendar, label: "Calendar", path: "/calendar", roles: ["hr"] },
   { icon: Icons.CheckSquare, label: "Todos", path: "/todos", roles: ["hr"] },
   { icon: Icons.Clock, label: "Attendance", path: "/attendance", roles: ["hr", "employee"] },
-  { icon: Icons.Calendar, label: "Leave", path: "/leave", roles: ["hr", "employee"] },
+  { icon: Icons.Calendar, label: "Leave", path: "/leave", roles: ["hr"] },
+  { icon: Icons.Calendar, label: "Leave Request", path: "/leave", roles: ["employee"] },
   { icon: Icons.DollarSign, label: "Payroll", path: "/payroll", roles: ["hr"] },
   { type: "heading", label: "Recruitment", roles: ["hr", "employee"] },
+  { icon: Icons.Clock, label: "Timesheet", path: "/timesheet", roles: ["employee"] },
   { icon: Icons.Briefcase, label: "Jobs", path: "/jobs", roles: ["hr", "employee"] },
-  { icon: Icons.UserCheck, label: "Candidates", path: "/candidates", roles: ["hr", "employee"] },
-  { icon: Icons.Globe, label: "Career Site", path: "/career-site", roles: ["hr", "employee"] },
+  { icon: Icons.UserCheck, label: "Candidates", path: "/candidates", roles: ["hr"] },
+  { icon: Icons.Globe, label: "Career Site", path: "/career-site", roles: ["hr"] },
   { type: "heading", label: "Organization", roles: ["hr", "employee"] },
-  { icon: Icons.Users, label: "Employees", path: "/employees", roles: ["hr"] },
-  { icon: Icons.Building, label: "Structure", path: "/structure", roles: ["hr", "employee"] },
+  { icon: Icons.Users, label: "Employees", path: "/employees", roles: ["hr", "employee"] },
+  { icon: Icons.Building, label: "Structure", path: "/structure", roles: ["hr"] },
   { icon: Icons.Video, label: "Meeting", path: "/meeting", roles: ["hr", "employee"] },
   { icon: Icons.BarChart3, label: "Reports", path: "/reports", roles: ["hr", "employee"] },
-
+  { icon: Icons.MapPin, label: "Tripets", path: "/tripets", roles: ["employee"] },
   { type: "heading", label: "Support", roles: ["hr", "employee"] },
-  { icon: Icons.User, label: "Profile", path: "/profile", roles: ["hr", "employee"] },
+  { icon: Icons.User, label: "Profile", path: "/profile", roles: ["hr"] },
   { icon: Icons.Settings, label: "Settings", path: "/settings", roles: ["hr", "employee"] },
+  { icon: Icons.Megaphone, label: "Announcements", path: "/announcements", roles: ["employee"] },
   { icon: Icons.HelpCircle, label: "Help Centre", path: "/help-centre", roles: ["hr", "employee"] }
 ];
 

@@ -13,10 +13,13 @@ import Todos from "./pages/Todos";
 import Jobs from "./pages/Jobs";
 import Candidates from "./pages/Candidates";
 import CareerSite from "./pages/CareerSite";
+import Timesheet from "./pages/Timesheet";
 import Structure from "./pages/Structure";
 import Meeting from "./pages/Meeting";
 import Settings from "./pages/Settings";
 import HelpCentre from "./pages/HelpCentre";
+import Announcements from "./pages/Announcements";
+import Tripets from "./pages/Tripets";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -39,10 +42,13 @@ function App() {
           <Route path="jobs" element={<Jobs />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="career-site" element={<CareerSite />} />
+          <Route path="timesheet" element={<Timesheet />} />
           <Route path="structure" element={<Structure />} />
           <Route path="meeting" element={<Meeting />} />
           <Route path="settings" element={<Settings />} />
           <Route path="help-centre" element={<HelpCentre />} />
+          <Route path="announcements" element={<Announcements />} />
+          <Route path="tripets" element={<Tripets />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -186,6 +186,17 @@ def save_attendance():
     with ATTENDANCE_FILE.open('w') as f:
         json.dump(attendance_records, f)
 
+# In-memory tripets storage (for demo, persist to file)
+TRIPETS_FILE = BASE_DIR / "tripets.json"
+tripets_records = []
+if TRIPETS_FILE.exists():
+    with TRIPETS_FILE.open() as f:
+        tripets_records = json.load(f)
+
+def save_tripets():
+    with TRIPETS_FILE.open('w') as f:
+        json.dump(tripets_records, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -392,6 +403,132 @@ def get_attendance():
         record['employeeName'] = employee['name'] if employee else 'Unknown'
 
     return jsonify({'attendance': records})
+
+# Tripets endpoints
+@app.route('/api/tripets', methods=['GET'])
+def get_tripets():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user_role == 'hr':
+        # HR can see all tripets
+        records = tripets_records
+    else:
+        # Employees can only see their own
+        records = [r for r in tripets_records if r['employeeId'] == user['id']]
+
+    # Sort by date descending
+    records.sort(key=lambda x: x['date'], reverse=True)
+
+    # Add employee names to records
+    for record in records:
+        employee = next((u for u in users if u['id'] == record['employeeId']), None)
+        record['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'tripets': records})
+
+@app.route('/api/tripets', methods=['POST'])
+def create_tripet():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    destination = data.get('destination')
+    purpose = data.get('purpose')
+    start_date = data.get('startDate')
+    end_date = data.get('endDate')
+    accommodation = data.get('accommodation', '')
+    transportation = data.get('transportation', '')
+
+    if not destination or not purpose or not start_date or not end_date:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    tripet = {
+        'id': len(tripets_records) + 1,
+        'employeeId': user['id'],
+        'destination': destination,
+        'purpose': purpose,
+        'startDate': start_date,
+        'endDate': end_date,
+        'accommodation': accommodation,
+        'transportation': transportation,
+        'status': 'Pending',
+        'date': datetime.now().strftime('%Y-%m-%d')
+    }
+    tripets_records.append(tripet)
+    save_tripets()
+
+    return jsonify({'message': 'Tripet created successfully', 'tripet': tripet})
+
+@app.route('/api/tripets/<int:tripet_id>', methods=['PUT'])
+def update_tripet(tripet_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    tripet = next((t for t in tripets_records if t['id'] == tripet_id), None)
+    if not tripet:
+        return jsonify({'error': 'Tripet not found'}), 404
+
+    # Only HR can update status, employees can only update their own tripets
+    if user_role != 'hr' and tripet['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.json
+    if 'status' in data and user_role == 'hr':
+        tripet['status'] = data['status']
+    elif user_role != 'hr':
+        # Employees can update details but not status
+        for field in ['destination', 'purpose', 'startDate', 'endDate', 'accommodation', 'transportation']:
+            if field in data:
+                tripet[field] = data[field]
+
+    save_tripets()
+    return jsonify({'message': 'Tripet updated successfully', 'tripet': tripet})
+
+@app.route('/api/tripets/<int:tripet_id>', methods=['DELETE'])
+def delete_tripet(tripet_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    tripet = next((t for t in tripets_records if t['id'] == tripet_id), None)
+    if not tripet:
+        return jsonify({'error': 'Tripet not found'}), 404
+
+    # Only HR can delete any tripet, employees can only delete their own pending tripets
+    if user_role != 'hr' and (tripet['employeeId'] != user['id'] or tripet['status'] != 'Pending'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    tripets_records.remove(tripet)
+    save_tripets()
+    return jsonify({'message': 'Tripet deleted successfully'})
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
