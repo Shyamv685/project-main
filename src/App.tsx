@@ -10,6 +10,11 @@ import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
 import Calendar from "./pages/Calendar";
 import Todos from "./pages/Todos";
+import Jobs from "./pages/Jobs";
+import Candidates from "./pages/Candidates";
+import CareerSite from "./pages/CareerSite";
+import Structure from "./pages/Structure";
+import Meeting from "./pages/Meeting";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -29,6 +34,11 @@ function App() {
           <Route path="inbox" element={<Inbox />} />
           <Route path="calendar" element={<Calendar />} />
           <Route path="todos" element={<Todos />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="candidates" element={<Candidates />} />
+          <Route path="career-site" element={<CareerSite />} />
+          <Route path="structure" element={<Structure />} />
+          <Route path="meeting" element={<Meeting />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

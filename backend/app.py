@@ -8,9 +8,9 @@ from pathlib import Path
 from datetime import datetime, timedelta
 # import magic
 # import spacy
-# from sklearn.feature_extraction.text import TfidfVectorizer
-# from sklearn.naive_bayes import MultinomialNB
-# from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import make_pipeline
 import hashlib
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -187,6 +187,7 @@ def save_attendance():
         json.dump(attendance_records, f)
 
 def hash_password(password):
+    import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
 
 @app.route('/api/signup', methods=['POST'])

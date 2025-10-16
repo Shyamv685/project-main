@@ -1,17 +1,5 @@
 import { NavLink } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Users,
-  Clock,
-  Calendar,
-  DollarSign,
-  BarChart3,
-  User,
-  Menu,
-  X,
-  Inbox,
-  CheckSquare
-} from "lucide-react";
+import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SidebarMenuProps {
@@ -21,24 +9,33 @@ interface SidebarMenuProps {
 }
 
 const allMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["hr", "employee"] },
-  { icon: Users, label: "Employees", path: "/employees", roles: ["hr"] },
-  { icon: Clock, label: "Attendance", path: "/attendance", roles: ["hr", "employee"] },
-  { icon: Calendar, label: "Leave", path: "/leave", roles: ["hr", "employee"] },
-  { icon: DollarSign, label: "Payroll", path: "/payroll", roles: ["hr"] },
-  { icon: BarChart3, label: "Reports", path: "/reports", roles: ["hr"] },
-  { icon: User, label: "Profile", path: "/profile", roles: ["hr", "employee"] },
-  { icon: Inbox, label: "Inbox", path: "/inbox", roles: ["hr"] },
-  { icon: Calendar, label: "Calendar", path: "/calendar", roles: ["hr"] },
-  { icon: CheckSquare, label: "Todos", path: "/todos", roles: ["hr"] }
+  { icon: Icons.LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["hr", "employee"] },
+  { icon: Icons.Users, label: "Employees", path: "/employees", roles: ["hr"] },
+  { icon: Icons.Clock, label: "Attendance", path: "/attendance", roles: ["hr", "employee"] },
+  { icon: Icons.Calendar, label: "Leave", path: "/leave", roles: ["hr", "employee"] },
+  { icon: Icons.DollarSign, label: "Payroll", path: "/payroll", roles: ["hr"] },
+  { icon: Icons.BarChart3, label: "Reports", path: "/reports", roles: ["hr"] },
+  { icon: Icons.User, label: "Profile", path: "/profile", roles: ["hr", "employee"] },
+  { icon: Icons.Inbox, label: "Inbox", path: "/inbox", roles: ["hr"] },
+  { icon: Icons.Calendar, label: "Calendar", path: "/calendar", roles: ["hr"] },
+  { icon: Icons.CheckSquare, label: "Todos", path: "/todos", roles: ["hr"] },
+  { type: "heading", label: "Recruitment", roles: ["hr", "employee"] },
+  { icon: Icons.Briefcase, label: "Jobs", path: "/jobs", roles: ["hr", "employee"] },
+  { icon: Icons.UserCheck, label: "Candidates", path: "/candidates", roles: ["hr", "employee"] },
+  { icon: Icons.Globe, label: "Career Site", path: "/career-site", roles: ["hr", "employee"] },
+  { type: "heading", label: "Organization", roles: ["hr", "employee"] },
+  { icon: Icons.Building, label: "Structure", path: "/structure", roles: ["hr", "employee"] },
+  { icon: Icons.Video, label: "Meeting", path: "/meeting", roles: ["hr", "employee"] },
+  { icon: Icons.BarChart3, label: "Reports", path: "/reports", roles: ["hr", "employee"] }
 ];
 
 export default function SidebarMenu({ isCollapsed, onToggle, role }: SidebarMenuProps) {
   const menuItems = allMenuItems.filter(item => item.roles.includes(role));
   return (
     <motion.aside
+      initial={{ width: 256 }}
       animate={{ width: isCollapsed ? 80 : 256 }}
-      className="bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-30 transition-all duration-300"
+      className="bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-30 transition-all duration-300 flex flex-col"
     >
       <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
         <AnimatePresence>
@@ -60,38 +57,52 @@ export default function SidebarMenu({ isCollapsed, onToggle, role }: SidebarMenu
           onClick={onToggle}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
-          {isCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
+          {isCollapsed ? <Icons.Menu className="w-5 h-5" /> : <Icons.X className="w-5 h-5" />}
         </button>
       </div>
 
-      <nav className="p-4 space-y-2">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
-            <AnimatePresence>
-              {!isCollapsed && (
+      <nav className="p-4 space-y-2 overflow-y-auto flex-1">
+        {menuItems.map((item, index) => {
+          if (item.type === "heading") {
+            return (
+              <div key={`heading-${index}`} className="px-4 py-2">
                 <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="font-medium"
+                  className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                 >
                   {item.label}
                 </motion.span>
-              )}
-            </AnimatePresence>
-          </NavLink>
-        ))}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path!}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`
+              }
+            >
+              {item.icon && <item.icon className="w-5 h-5 flex-shrink-0" />}
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="font-medium"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </NavLink>
+          );
+        })}
       </nav>
     </motion.aside>
   );
