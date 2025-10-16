@@ -11,7 +11,7 @@ export default function DashboardLayout() {
     const user = localStorage.getItem('user');
     if (user) {
       const userData = JSON.parse(user);
-      setRole(userData.role === 'hr' ? 'admin' : 'employee');
+      setRole(userData.role);
     }
   }, []);
 

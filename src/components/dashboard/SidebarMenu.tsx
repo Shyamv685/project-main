@@ -8,7 +8,9 @@ import {
   BarChart3,
   User,
   Menu,
-  X
+  X,
+  Inbox,
+  CheckSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,13 +21,16 @@ interface SidebarMenuProps {
 }
 
 const allMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["admin", "employee"] },
-  { icon: Users, label: "Employees", path: "/employees", roles: ["admin"] },
-  { icon: Clock, label: "Attendance", path: "/attendance", roles: ["admin", "employee"] },
-  { icon: Calendar, label: "Leave", path: "/leave", roles: ["admin", "employee"] },
-  { icon: DollarSign, label: "Payroll", path: "/payroll", roles: ["admin"] },
-  { icon: BarChart3, label: "Reports", path: "/reports", roles: ["admin"] },
-  { icon: User, label: "Profile", path: "/profile", roles: ["admin", "employee"] }
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["hr", "employee"] },
+  { icon: Users, label: "Employees", path: "/employees", roles: ["hr"] },
+  { icon: Clock, label: "Attendance", path: "/attendance", roles: ["hr", "employee"] },
+  { icon: Calendar, label: "Leave", path: "/leave", roles: ["hr", "employee"] },
+  { icon: DollarSign, label: "Payroll", path: "/payroll", roles: ["hr"] },
+  { icon: BarChart3, label: "Reports", path: "/reports", roles: ["hr"] },
+  { icon: User, label: "Profile", path: "/profile", roles: ["hr", "employee"] },
+  { icon: Inbox, label: "Inbox", path: "/inbox", roles: ["hr"] },
+  { icon: Calendar, label: "Calendar", path: "/calendar", roles: ["hr"] },
+  { icon: CheckSquare, label: "Todos", path: "/todos", roles: ["hr"] }
 ];
 
 export default function SidebarMenu({ isCollapsed, onToggle, role }: SidebarMenuProps) {

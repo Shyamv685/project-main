@@ -7,6 +7,9 @@ import Leave from "./pages/Leave";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
+import Inbox from "./pages/Inbox";
+import Calendar from "./pages/Calendar";
+import Todos from "./pages/Todos";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -23,6 +26,9 @@ function App() {
           <Route path="payroll" element={<Payroll />} />
           <Route path="reports" element={<Reports />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="inbox" element={<Inbox />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="todos" element={<Todos />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
