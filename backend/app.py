@@ -197,6 +197,28 @@ def save_tripets():
     with TRIPETS_FILE.open('w') as f:
         json.dump(tripets_records, f)
 
+# In-memory meetings storage (for demo, persist to file)
+MEETINGS_FILE = BASE_DIR / "meetings.json"
+meetings_records = []
+if MEETINGS_FILE.exists():
+    with MEETINGS_FILE.open() as f:
+        meetings_records = json.load(f)
+
+def save_meetings():
+    with MEETINGS_FILE.open('w') as f:
+        json.dump(meetings_records, f)
+
+# In-memory timesheets storage (for demo, persist to file)
+TIMESHEETS_FILE = BASE_DIR / "timesheets.json"
+timesheets_records = []
+if TIMESHEETS_FILE.exists():
+    with TIMESHEETS_FILE.open() as f:
+        timesheets_records = json.load(f)
+
+def save_timesheets():
+    with TIMESHEETS_FILE.open('w') as f:
+        json.dump(timesheets_records, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -529,6 +551,352 @@ def delete_tripet(tripet_id):
     tripets_records.remove(tripet)
     save_tripets()
     return jsonify({'message': 'Tripet deleted successfully'})
+
+# Meetings endpoints
+@app.route('/api/meetings', methods=['GET'])
+def get_meetings():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user_role == 'hr':
+        # HR can see all meetings
+        records = meetings_records
+    else:
+        # Employees can see meetings they're invited to or created
+        records = [r for r in meetings_records if r['organizerId'] == user['id'] or user['id'] in r.get('participants', [])]
+
+    # Sort by date and time descending
+    records.sort(key=lambda x: (x['date'], x['startTime']), reverse=True)
+
+    # Add organizer names to records
+    for record in records:
+        organizer = next((u for u in users if u['id'] == record['organizerId']), None)
+        record['organizerName'] = organizer['name'] if organizer else 'Unknown'
+
+    return jsonify({'meetings': records})
+
+@app.route('/api/meetings', methods=['POST'])
+def create_meeting():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    title = data.get('title')
+    date = data.get('date')
+    start_time = data.get('startTime')
+    end_time = data.get('endTime')
+    location = data.get('location', '')
+    agenda = data.get('agenda', '')
+    participants = data.get('participants', [])
+
+    if not title or not date or not start_time or not end_time:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    meeting = {
+        'id': len(meetings_records) + 1,
+        'organizerId': user['id'],
+        'title': title,
+        'date': date,
+        'startTime': start_time,
+        'endTime': end_time,
+        'location': location,
+        'agenda': agenda,
+        'participants': participants,
+        'status': 'Scheduled',
+        'createdAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    meetings_records.append(meeting)
+    save_meetings()
+
+    return jsonify({'message': 'Meeting created successfully', 'meeting': meeting})
+
+@app.route('/api/meetings/<int:meeting_id>', methods=['PUT'])
+def update_meeting(meeting_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    meeting = next((m for m in meetings_records if m['id'] == meeting_id), None)
+    if not meeting:
+        return jsonify({'error': 'Meeting not found'}), 404
+
+    # Only organizer or HR can update meetings
+    if user_role != 'hr' and meeting['organizerId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.json
+    for field in ['title', 'date', 'startTime', 'endTime', 'location', 'agenda', 'participants', 'status']:
+        if field in data:
+            meeting[field] = data[field]
+
+    save_meetings()
+    return jsonify({'message': 'Meeting updated successfully', 'meeting': meeting})
+
+@app.route('/api/meetings/<int:meeting_id>', methods=['DELETE'])
+def delete_meeting(meeting_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    meeting = next((m for m in meetings_records if m['id'] == meeting_id), None)
+    if not meeting:
+        return jsonify({'error': 'Meeting not found'}), 404
+
+    # Only organizer or HR can delete meetings
+    if user_role != 'hr' and meeting['organizerId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    meetings_records.remove(meeting)
+    save_meetings()
+    return jsonify({'message': 'Meeting deleted successfully'})
+
+# Timesheets endpoints
+@app.route('/api/timesheets', methods=['GET'])
+def get_timesheets():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get query parameters for filtering
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if user_role == 'hr':
+        # HR can see all timesheets
+        records = timesheets_records
+    else:
+        # Employees can only see their own timesheets
+        records = [r for r in timesheets_records if r['employeeId'] == user['id']]
+
+    # Filter by date range if provided
+    if start_date and end_date:
+        records = [r for r in records if start_date <= r['date'] <= end_date]
+
+    # Sort by date descending
+    records.sort(key=lambda x: x['date'], reverse=True)
+
+    # Add employee names to records
+    for record in records:
+        employee = next((u for u in users if u['id'] == record['employeeId']), None)
+        record['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'timesheets': records})
+
+@app.route('/api/timesheets', methods=['POST'])
+def create_timesheet():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    date = data.get('date')
+    project = data.get('project', '')
+    task = data.get('task', '')
+    hours = data.get('hours')
+    description = data.get('description', '')
+
+    if not date or hours is None:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    if not isinstance(hours, (int, float)) or hours < 0 or hours > 24:
+        return jsonify({'error': 'Invalid hours value'}), 400
+
+    timesheet = {
+        'id': len(timesheets_records) + 1,
+        'employeeId': user['id'],
+        'date': date,
+        'project': project,
+        'task': task,
+        'hours': float(hours),
+        'description': description,
+        'createdAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'updatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    timesheets_records.append(timesheet)
+    save_timesheets()
+
+    return jsonify({'message': 'Timesheet entry created successfully', 'timesheet': timesheet})
+
+@app.route('/api/timesheets/<int:timesheet_id>', methods=['PUT'])
+def update_timesheet(timesheet_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    timesheet = next((t for t in timesheets_records if t['id'] == timesheet_id), None)
+    if not timesheet:
+        return jsonify({'error': 'Timesheet entry not found'}), 404
+
+    # Only the owner or HR can update timesheets
+    if user_role != 'hr' and timesheet['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.json
+    for field in ['date', 'project', 'task', 'description']:
+        if field in data:
+            timesheet[field] = data[field]
+
+    if 'hours' in data:
+        hours = data['hours']
+        if not isinstance(hours, (int, float)) or hours < 0 or hours > 24:
+            return jsonify({'error': 'Invalid hours value'}), 400
+        timesheet['hours'] = float(hours)
+
+    timesheet['updatedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    save_timesheets()
+    return jsonify({'message': 'Timesheet entry updated successfully', 'timesheet': timesheet})
+
+@app.route('/api/timesheets/<int:timesheet_id>', methods=['DELETE'])
+def delete_timesheet(timesheet_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    timesheet = next((t for t in timesheets_records if t['id'] == timesheet_id), None)
+    if not timesheet:
+        return jsonify({'error': 'Timesheet entry not found'}), 404
+
+    # Only the owner or HR can delete timesheets
+    if user_role != 'hr' and timesheet['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    timesheets_records.remove(timesheet)
+    save_timesheets()
+    return jsonify({'message': 'Timesheet entry deleted successfully'})
+
+@app.route('/api/timesheets/summary', methods=['GET'])
+def get_timesheet_summary():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get query parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    period = request.args.get('period', 'weekly')  # weekly, monthly, custom
+
+    if user_role == 'hr':
+        # HR can see all summaries
+        all_records = timesheets_records
+    else:
+        # Employees can only see their own summaries
+        all_records = [r for r in timesheets_records if r['employeeId'] == user['id']]
+
+    # Filter by date range
+    if start_date and end_date:
+        filtered_records = [r for r in all_records if start_date <= r['date'] <= end_date]
+    else:
+        # Default to current week/month
+        today = datetime.now()
+        if period == 'weekly':
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+        elif period == 'monthly':
+            start_of_month = today.replace(day=1)
+            end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        else:
+            # Default to current week
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+
+        start_date = start_of_week.strftime('%Y-%m-%d') if period == 'weekly' else start_of_month.strftime('%Y-%m-%d')
+        end_date = end_of_week.strftime('%Y-%m-%d') if period == 'weekly' else end_of_month.strftime('%Y-%m-%d')
+        filtered_records = [r for r in all_records if start_date <= r['date'] <= end_date]
+
+    # Calculate summary
+    total_hours = sum(r['hours'] for r in filtered_records)
+    total_entries = len(filtered_records)
+
+    # Group by project
+    project_summary = {}
+    for record in filtered_records:
+        project = record.get('project', 'No Project')
+        if project not in project_summary:
+            project_summary[project] = {'hours': 0, 'entries': 0}
+        project_summary[project]['hours'] += record['hours']
+        project_summary[project]['entries'] += 1
+
+    # Group by employee (for HR view)
+    employee_summary = {}
+    if user_role == 'hr':
+        for record in filtered_records:
+            employee_id = record['employeeId']
+            employee = next((u for u in users if u['id'] == employee_id), None)
+            employee_name = employee['name'] if employee else 'Unknown'
+            if employee_name not in employee_summary:
+                employee_summary[employee_name] = {'hours': 0, 'entries': 0}
+            employee_summary[employee_name]['hours'] += record['hours']
+            employee_summary[employee_name]['entries'] += 1
+
+    summary = {
+        'period': {
+            'start_date': start_date,
+            'end_date': end_date,
+            'type': period
+        },
+        'total_hours': total_hours,
+        'total_entries': total_entries,
+        'project_summary': project_summary,
+        'employee_summary': employee_summary if user_role == 'hr' else None
+    }
+
+    return jsonify(summary)
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
