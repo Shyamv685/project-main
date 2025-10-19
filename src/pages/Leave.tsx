@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import LeaveTable from "@/components/leave/LeaveTable";
 import LeaveRequestForm from "@/components/leave/LeaveRequestForm";
@@ -7,11 +7,20 @@ import Alert from "@/components/common/Alert";
 
 export default function Leave() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>("employee");
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
     isVisible: boolean;
   }>({ type: "success", message: "", isVisible: false });
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setUserRole(userData.role);
+    }
+  }, []);
 
   const handleSubmit = (data: any) => {
     console.log("Leave request:", data);
@@ -66,7 +75,7 @@ export default function Leave() {
         isVisible={alert.isVisible}
       />
 
-      <LeaveTable onApprove={handleApprove} onReject={handleReject} />
+      <LeaveTable onApprove={handleApprove} onReject={handleReject} userRole={userRole} />
 
       <Modal
         isOpen={isModalOpen}

@@ -6,9 +6,10 @@ import { motion } from "framer-motion";
 interface LeaveTableProps {
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
+  userRole?: string;
 }
 
-export default function LeaveTable({ onApprove, onReject }: LeaveTableProps) {
+export default function LeaveTable({ onApprove, onReject, userRole }: LeaveTableProps) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "Approved":
@@ -55,9 +56,11 @@ export default function LeaveTable({ onApprove, onReject }: LeaveTableProps) {
             <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
-            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
+            {userRole === "hr" && (
+              <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -97,7 +100,7 @@ export default function LeaveTable({ onApprove, onReject }: LeaveTableProps) {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {request.status === "Pending" && (
+                  {request.status === "Pending" && userRole === "hr" && (
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => onApprove?.(request.id)}
