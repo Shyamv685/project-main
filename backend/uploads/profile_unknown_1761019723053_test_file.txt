@@ -1,0 +1,6 @@
+This is a test file for analysis.
+It contains an email: test@example.com
+A phone number: +1-234-567-8901
+Some money: $1000 USD
+And a URL: https://example.com
+Date: 2023-10-15
