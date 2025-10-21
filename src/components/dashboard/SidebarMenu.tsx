@@ -35,7 +35,7 @@ const allMenuItems = [
   { type: "heading", label: "Support", roles: ["hr", "employee"] },
   { icon: Icons.User, label: "Profile", path: "/profile", roles: ["hr"] },
   { icon: Icons.Settings, label: "Settings", path: "/settings", roles: ["hr", "employee"] },
-  { icon: Icons.Megaphone, label: "Announcements", path: "/announcements", roles: ["employee"] },
+  { icon: Icons.Megaphone, label: "Announcements", path: "/announcements", roles: ["hr", "employee"] },
   { icon: Icons.HelpCircle, label: "Help Centre", path: "/help-centre", roles: ["hr", "employee"] }
 ];
 

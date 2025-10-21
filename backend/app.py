@@ -264,6 +264,17 @@ def save_feedbacks():
     with FEEDBACKS_FILE.open('w') as f:
         json.dump(feedbacks_records, f)
 
+# In-memory announcements storage (for demo, persist to file)
+ANNOUNCEMENTS_FILE = BASE_DIR / "announcements.json"
+announcements_records = []
+if ANNOUNCEMENTS_FILE.exists():
+    with ANNOUNCEMENTS_FILE.open() as f:
+        announcements_records = json.load(f)
+
+def save_announcements():
+    with ANNOUNCEMENTS_FILE.open('w') as f:
+        json.dump(announcements_records, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -1263,6 +1274,115 @@ def get_feedback_stats():
             'categories': categories
         }
     })
+
+# Announcements endpoints
+@app.route('/api/announcements', methods=['GET'])
+def get_announcements():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Filter active announcements
+    active_announcements = [a for a in announcements_records if a.get('isActive', True)]
+
+    # Sort by creation date descending (newest first)
+    active_announcements.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+
+    # Add creator names
+    for announcement in active_announcements:
+        creator = next((u for u in users if u['id'] == announcement.get('createdBy')), None)
+        announcement['createdByName'] = creator['name'] if creator else 'HR Team'
+
+    return jsonify({'announcements': active_announcements})
+
+@app.route('/api/announcements', methods=['POST'])
+def create_announcement():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can create announcements'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    title = data.get('title')
+    content = data.get('content')
+    announcement_type = data.get('type', 'general')
+    priority = data.get('priority', 'normal')
+    target_audience = data.get('targetAudience', 'all')
+
+    if not title or not content:
+        return jsonify({'error': 'Title and content are required'}), 400
+
+    announcement = {
+        'id': len(announcements_records) + 1,
+        'title': title,
+        'content': content,
+        'type': announcement_type,
+        'priority': priority,
+        'createdBy': user['id'],
+        'createdAt': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'isActive': True,
+        'targetAudience': target_audience
+    }
+    announcements_records.append(announcement)
+    save_announcements()
+
+    return jsonify({'message': 'Announcement created successfully', 'announcement': announcement})
+
+@app.route('/api/announcements/<int:announcement_id>', methods=['PUT'])
+def update_announcement(announcement_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can update announcements'}), 403
+
+    announcement = next((a for a in announcements_records if a['id'] == announcement_id), None)
+    if not announcement:
+        return jsonify({'error': 'Announcement not found'}), 404
+
+    data = request.json
+    for field in ['title', 'content', 'type', 'priority', 'isActive', 'targetAudience']:
+        if field in data:
+            announcement[field] = data[field]
+
+    save_announcements()
+    return jsonify({'message': 'Announcement updated successfully', 'announcement': announcement})
+
+@app.route('/api/announcements/<int:announcement_id>', methods=['DELETE'])
+def delete_announcement(announcement_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can delete announcements'}), 403
+
+    announcement = next((a for a in announcements_records if a['id'] == announcement_id), None)
+    if not announcement:
+        return jsonify({'error': 'Announcement not found'}), 404
+
+    announcements_records.remove(announcement)
+    save_announcements()
+    return jsonify({'message': 'Announcement deleted successfully'})
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')

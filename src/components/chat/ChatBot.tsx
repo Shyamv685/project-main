@@ -14,7 +14,7 @@ export default function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm your HR Assistant. I can help you with:\n\n• Leave balance and applications\n• Attendance information\n• HR policies and guidelines\n• Timesheet summaries\n• Training information\n\nTry asking:\n- \"What's my leave balance?\"\n- \"Show my attendance for last month\"\n- \"Tell me about leave policy\"\n- \"How many hours did I work this week?\"",
+      text: "Hello! I'm your HR Assistant. I can help you with:\n\n• Leave balance and applications\n• Attendance information\n• HR policies and guidelines\n• Timesheet summaries\n• Training information\n• Company announcements\n\nTry asking:\n- \"What's my leave balance?\"\n- \"Show my attendance for last month\"\n- \"Tell me about leave policy\"\n- \"How many hours did I work this week?\"\n- \"What are the latest announcements?\"",
       isBot: true,
       timestamp: new Date(),
     },
