@@ -4,10 +4,12 @@ import LeaveTable from "@/components/leave/LeaveTable";
 import LeaveRequestForm from "@/components/leave/LeaveRequestForm";
 import Modal from "@/components/common/Modal";
 import Alert from "@/components/common/Alert";
+import { leaveRequests } from "@/data/dummyData";
 
 export default function Leave() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("employee");
+  const [leaveData, setLeaveData] = useState(leaveRequests);
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
@@ -24,6 +26,30 @@ export default function Leave() {
 
   const handleSubmit = (data: any) => {
     console.log("Leave request:", data);
+
+    // Get current user data
+    const user = localStorage.getItem('user');
+    const userData = user ? JSON.parse(user) : null;
+
+    if (userData && userRole === "employee") {
+      // Create new leave request for employee
+      const newLeaveRequest = {
+        id: leaveData.length + 1,
+        employeeId: userData.id || 1,
+        employeeName: userData.name || "Current User",
+        leaveType: data.leaveType,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        days: data.days,
+        reason: data.reason,
+        status: "Pending",
+        appliedDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Add to leave data
+      setLeaveData(prev => [...prev, newLeaveRequest]);
+    }
+
     setIsModalOpen(false);
     setAlert({
       type: "success",
@@ -35,6 +61,9 @@ export default function Leave() {
 
   const handleApprove = (id: number) => {
     console.log("Approve leave:", id);
+    setLeaveData(prev => prev.map(request =>
+      request.id === id ? { ...request, status: "Approved" } : request
+    ));
     setAlert({
       type: "success",
       message: "Leave request approved!",
@@ -45,6 +74,9 @@ export default function Leave() {
 
   const handleReject = (id: number) => {
     console.log("Reject leave:", id);
+    setLeaveData(prev => prev.map(request =>
+      request.id === id ? { ...request, status: "Rejected" } : request
+    ));
     setAlert({
       type: "error",
       message: "Leave request rejected!",
@@ -75,7 +107,7 @@ export default function Leave() {
         isVisible={alert.isVisible}
       />
 
-      <LeaveTable onApprove={handleApprove} onReject={handleReject} userRole={userRole} />
+      <LeaveTable onApprove={handleApprove} onReject={handleReject} userRole={userRole} leaveData={leaveData} />
 
       <Modal
         isOpen={isModalOpen}

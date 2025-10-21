@@ -1,0 +1,1 @@
+[{"id": 1, "employeeId": 33, "trainingId": 1, "enrolledAt": "2025-10-21 06:57:07", "status": "Completed", "progress": 100, "completedAt": "2025-10-21 06:57:16"}, {"id": 2, "employeeId": 33, "trainingId": 2, "enrolledAt": "2025-10-21 07:40:59", "status": "Completed", "progress": 100, "completedAt": "2025-10-21 07:41:05"}]

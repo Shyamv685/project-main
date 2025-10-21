@@ -6,6 +6,7 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
+from chatbot import get_chatbot
 # import magic
 # import spacy
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -218,6 +219,50 @@ if TIMESHEETS_FILE.exists():
 def save_timesheets():
     with TIMESHEETS_FILE.open('w') as f:
         json.dump(timesheets_records, f)
+
+# In-memory trainings storage (for demo, persist to file)
+TRAININGS_FILE = BASE_DIR / "trainings.json"
+trainings_records = []
+if TRAININGS_FILE.exists():
+    with TRAININGS_FILE.open() as f:
+        trainings_records = json.load(f)
+
+def save_trainings():
+    with TRAININGS_FILE.open('w') as f:
+        json.dump(trainings_records, f)
+
+# In-memory enrollments storage (for demo, persist to file)
+ENROLLMENTS_FILE = BASE_DIR / "enrollments.json"
+enrollments_records = []
+if ENROLLMENTS_FILE.exists():
+    with ENROLLMENTS_FILE.open() as f:
+        enrollments_records = json.load(f)
+
+def save_enrollments():
+    with ENROLLMENTS_FILE.open('w') as f:
+        json.dump(enrollments_records, f)
+
+# In-memory certificates storage (for demo, persist to file)
+CERTIFICATES_FILE = BASE_DIR / "certificates.json"
+certificates_records = []
+if CERTIFICATES_FILE.exists():
+    with CERTIFICATES_FILE.open() as f:
+        certificates_records = json.load(f)
+
+def save_certificates():
+    with CERTIFICATES_FILE.open('w') as f:
+        json.dump(certificates_records, f)
+
+# In-memory feedbacks storage (for demo, persist to file)
+FEEDBACKS_FILE = BASE_DIR / "feedbacks.json"
+feedbacks_records = []
+if FEEDBACKS_FILE.exists():
+    with FEEDBACKS_FILE.open() as f:
+        feedbacks_records = json.load(f)
+
+def save_feedbacks():
+    with FEEDBACKS_FILE.open('w') as f:
+        json.dump(feedbacks_records, f)
 
 def hash_password(password):
     import hashlib
@@ -898,10 +943,355 @@ def get_timesheet_summary():
 
     return jsonify(summary)
 
+# Training endpoints
+@app.route('/api/trainings', methods=['GET'])
+def get_trainings():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get enrolled trainings for this user
+    enrolled_training_ids = [e['trainingId'] for e in enrollments_records if e['employeeId'] == user['id']]
+
+    # Add enrollment status to trainings
+    trainings_with_status = []
+    for training in trainings_records:
+        training_copy = training.copy()
+        training_copy['isEnrolled'] = training['id'] in enrolled_training_ids
+        trainings_with_status.append(training_copy)
+
+    return jsonify({'trainings': trainings_with_status})
+
+@app.route('/api/trainings/enroll', methods=['POST'])
+def enroll_training():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    training_id = data.get('trainingId')
+
+    if not training_id:
+        return jsonify({'error': 'Training ID required'}), 400
+
+    training = next((t for t in trainings_records if t['id'] == training_id), None)
+    if not training:
+        return jsonify({'error': 'Training not found'}), 404
+
+    if training['seatsAvailable'] <= 0:
+        return jsonify({'error': 'No seats available'}), 400
+
+    # Check if already enrolled
+    existing = next((e for e in enrollments_records if e['employeeId'] == user['id'] and e['trainingId'] == training_id), None)
+    if existing:
+        return jsonify({'error': 'Already enrolled'}), 400
+
+    enrollment = {
+        'id': len(enrollments_records) + 1,
+        'employeeId': user['id'],
+        'trainingId': training_id,
+        'enrolledAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'status': 'Enrolled',
+        'progress': 0
+    }
+    enrollments_records.append(enrollment)
+
+    # Decrease available seats
+    training['seatsAvailable'] -= 1
+    save_trainings()
+    save_enrollments()
+
+    return jsonify({'message': 'Successfully enrolled', 'enrollment': enrollment})
+
+@app.route('/api/trainings/my', methods=['GET'])
+def get_my_trainings():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get user's enrollments
+    user_enrollments = [e for e in enrollments_records if e['employeeId'] == user['id']]
+
+    # Combine with training details
+    my_trainings = []
+    for enrollment in user_enrollments:
+        training = next((t for t in trainings_records if t['id'] == enrollment['trainingId']), None)
+        if training:
+            combined = {
+                **training,
+                'enrollment': enrollment
+            }
+            my_trainings.append(combined)
+
+    return jsonify({'trainings': my_trainings})
+
+@app.route('/api/trainings/<int:training_id>/complete', methods=['POST'])
+def complete_training(training_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    enrollment = next((e for e in enrollments_records if e['employeeId'] == user['id'] and e['trainingId'] == training_id), None)
+    if not enrollment:
+        return jsonify({'error': 'Not enrolled in this training'}), 404
+
+    enrollment['status'] = 'Completed'
+    enrollment['progress'] = 100
+    enrollment['completedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Generate certificate
+    training = next((t for t in trainings_records if t['id'] == training_id), None)
+    certificate = {
+        'id': len(certificates_records) + 1,
+        'employeeId': user['id'],
+        'trainingId': training_id,
+        'trainingTitle': training['title'],
+        'trainer': training['trainer'],
+        'completionDate': enrollment['completedAt'],
+        'certificateUrl': f'/certificates/{len(certificates_records) + 1}.pdf'
+    }
+    certificates_records.append(certificate)
+
+    save_enrollments()
+    save_certificates()
+
+    return jsonify({'message': 'Training completed', 'certificate': certificate})
+
+@app.route('/api/trainings/<int:training_id>/certificate', methods=['GET'])
+def get_certificate(training_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    certificate = next((c for c in certificates_records if c['employeeId'] == user['id'] and c['trainingId'] == training_id), None)
+    if not certificate:
+        return jsonify({'error': 'Certificate not found'}), 404
+
+    return jsonify({'certificate': certificate})
+
+@app.route('/api/trainings/<int:training_id>/feedback', methods=['POST'])
+def submit_feedback(training_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    rating = data.get('rating')
+    feedback = data.get('feedback', '')
+
+    if rating is None or not (1 <= rating <= 5):
+        return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+
+    enrollment = next((e for e in enrollments_records if e['employeeId'] == user['id'] and e['trainingId'] == training_id), None)
+    if not enrollment:
+        return jsonify({'error': 'Not enrolled in this training'}), 404
+
+    enrollment['rating'] = rating
+    enrollment['feedback'] = feedback
+    enrollment['feedbackSubmittedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    save_enrollments()
+
+    return jsonify({'message': 'Feedback submitted successfully'})
+
+# Feedback endpoints
+@app.route('/api/feedbacks', methods=['GET'])
+def get_feedbacks():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user_role == 'hr':
+        # HR can see all feedbacks
+        return jsonify({'feedbacks': feedbacks_records})
+    else:
+        # Employees can see only their own feedbacks
+        user_feedbacks = [f for f in feedbacks_records if f['employeeId'] == user['id']]
+        return jsonify({'feedbacks': user_feedbacks})
+
+@app.route('/api/feedbacks', methods=['POST'])
+def submit_general_feedback():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'employee':
+        return jsonify({'error': 'Only employees can submit feedback'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    feedback_type = data.get('type')
+    title = data.get('title')
+    description = data.get('description', '')
+    rating = data.get('rating')
+    category = data.get('category')
+    anonymous = data.get('anonymous', False)
+
+    if not all([feedback_type, title, rating is not None, category]):
+        return jsonify({'error': 'Type, title, rating, and category are required'}), 400
+
+    if rating < 1 or rating > 5:
+        return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+
+    feedback = {
+        'id': len(feedbacks_records) + 1,
+        'employeeId': user['id'],
+        'employeeName': user['name'] if not anonymous else 'Anonymous',
+        'type': feedback_type,
+        'title': title,
+        'description': description,
+        'rating': rating,
+        'category': category,
+        'anonymous': anonymous,
+        'submittedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'status': 'pending'
+    }
+    feedbacks_records.append(feedback)
+    save_feedbacks()
+
+    return jsonify({'message': 'Feedback submitted successfully', 'feedback': feedback})
+
+@app.route('/api/feedbacks/<int:feedback_id>/status', methods=['PUT'])
+def update_feedback_status(feedback_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can update feedback status'}), 403
+
+    data = request.json
+    status = data.get('status')
+
+    if status not in ['pending', 'reviewed', 'resolved']:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    feedback = next((f for f in feedbacks_records if f['id'] == feedback_id), None)
+    if not feedback:
+        return jsonify({'error': 'Feedback not found'}), 404
+
+    feedback['status'] = status
+    feedback['reviewedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    save_feedbacks()
+
+    return jsonify({'message': 'Feedback status updated successfully'})
+
+@app.route('/api/feedbacks/stats', methods=['GET'])
+def get_feedback_stats():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can view feedback statistics'}), 403
+
+    total_feedbacks = len(feedbacks_records)
+    pending_feedbacks = len([f for f in feedbacks_records if f['status'] == 'pending'])
+    reviewed_feedbacks = len([f for f in feedbacks_records if f['status'] == 'reviewed'])
+    resolved_feedbacks = len([f for f in feedbacks_records if f['status'] == 'resolved'])
+
+    # Calculate average rating
+    ratings = [f['rating'] for f in feedbacks_records if f['rating']]
+    avg_rating = sum(ratings) / len(ratings) if ratings else 0
+
+    # Category breakdown
+    categories = {}
+    for feedback in feedbacks_records:
+        cat = feedback['category']
+        if cat not in categories:
+            categories[cat] = 0
+        categories[cat] += 1
+
+    return jsonify({
+        'stats': {
+            'total': total_feedbacks,
+            'pending': pending_feedbacks,
+            'reviewed': reviewed_feedbacks,
+            'resolved': resolved_feedbacks,
+            'averageRating': round(avg_rating, 1),
+            'categories': categories
+        }
+    })
+
 # Serve uploaded files
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(str(BASE_DIR / "uploads"), filename)
+
+# Chatbot endpoint
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    message = data.get('message', '')
+
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    chatbot = get_chatbot(BASE_DIR)
+    response = chatbot.get_response(user['id'], message)
+
+    return jsonify({'response': response})
 
 # Health check endpoint
 @app.route('/api/health', methods=['GET'])

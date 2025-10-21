@@ -1,15 +1,30 @@
-import { leaveRequests } from "@/data/dummyData";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+
+interface LeaveRequest {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason?: string;
+  status: string;
+  appliedDate: string;
+}
 
 interface LeaveTableProps {
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
   userRole?: string;
+  leaveData?: LeaveRequest[];
 }
 
-export default function LeaveTable({ onApprove, onReject, userRole }: LeaveTableProps) {
+export default function LeaveTable({ onApprove, onReject, userRole, leaveData }: LeaveTableProps) {
+  // Use provided leaveData or fallback to dummy data
+  const requests = leaveData || [];
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "Approved":
@@ -64,7 +79,7 @@ export default function LeaveTable({ onApprove, onReject, userRole }: LeaveTable
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {leaveRequests.map((request, index) => {
+          {requests.map((request: LeaveRequest, index: number) => {
             const statusConfig = getStatusConfig(request.status);
             const StatusIcon = statusConfig.icon;
 

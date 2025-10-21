@@ -386,4 +386,220 @@ export const api = {
     }
     return response.json();
   },
+  getTrainings: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch trainings');
+    }
+    return response.json();
+  },
+  enrollTraining: async (trainingId: number) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings/enroll`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify({ trainingId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to enroll in training');
+    }
+    return response.json();
+  },
+  getMyTrainings: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings/my`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch my trainings');
+    }
+    return response.json();
+  },
+  completeTraining: async (trainingId: number) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings/${trainingId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to complete training');
+    }
+    return response.json();
+  },
+  getCertificate: async (trainingId: number) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings/${trainingId}/certificate`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch certificate');
+    }
+    return response.json();
+  },
+  submitFeedback: async (trainingId: number, rating: number, feedback: string) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/trainings/${trainingId}/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify({ rating, feedback }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to submit feedback');
+    }
+    return response.json();
+  },
+  getFeedbacks: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/feedbacks`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch feedbacks');
+    }
+    return response.json();
+  },
+  submitEmployeeFeedback: async (feedbackData: {
+    type: string;
+    title: string;
+    description: string;
+    rating: number;
+    category: string;
+    anonymous: boolean;
+  }) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/feedbacks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(feedbackData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to submit feedback');
+    }
+    return response.json();
+  },
+  updateFeedbackStatus: async (feedbackId: number, status: string) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/feedbacks/${feedbackId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update feedback status');
+    }
+    return response.json();
+  },
+  getFeedbackStats: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/feedbacks/stats`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch feedback stats');
+    }
+    return response.json();
+  },
+  chat: async (message: string) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify({ message }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Chat failed');
+    }
+    return response.json();
+  },
 };

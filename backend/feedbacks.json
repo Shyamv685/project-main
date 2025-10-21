@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1,
+    "employeeId": 5,
+    "employeeName": "John Doe",
+    "type": "work_environment",
+    "title": "Office Facilities",
+    "description": "The office facilities are excellent and well-maintained.",
+    "rating": 5,
+    "category": "Work Environment",
+    "anonymous": false,
+    "submittedAt": "2025-01-15 10:30:00",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "employeeId": 6,
+    "employeeName": "Jane Smith",
+    "type": "management",
+    "title": "Management Support",
+    "description": "Management has been very supportive during the recent project.",
+    "rating": 4,
+    "category": "Management",
+    "anonymous": true,
+    "submittedAt": "2025-01-14 14:20:00",
+    "status": "reviewed"
+  },
+  {
+    "id": 3,
+    "employeeId": 7,
+    "employeeName": "Bob Johnson",
+    "type": "policies",
+    "title": "Leave Policy",
+    "description": "The leave policy needs more flexibility for personal emergencies.",
+    "rating": 3,
+    "category": "Policies",
+    "anonymous": false,
+    "submittedAt": "2025-01-13 09:15:00",
+    "status": "pending"
+  }
+]
