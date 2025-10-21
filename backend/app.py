@@ -13,6 +13,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
 import hashlib
+import logging
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -28,6 +29,10 @@ app = Flask(__name__, static_folder=str(BASE_DIR.parent / "frontend"))
 
 # Enable CORS for all routes
 CORS(app)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load sample training data and train a simple TF-IDF + NB classifier on startup
 TRAIN_FILE = BASE_DIR / "sample_training_data.json"
@@ -286,6 +291,17 @@ def save_documents():
     with DOCUMENTS_FILE.open('w') as f:
         json.dump(documents_records, f)
 
+# In-memory payroll storage (for demo, persist to file)
+PAYROLL_FILE = BASE_DIR / "payroll.json"
+payroll_records = []
+if PAYROLL_FILE.exists():
+    with PAYROLL_FILE.open() as f:
+        payroll_records = json.load(f)
+
+def save_payroll():
+    with PAYROLL_FILE.open('w') as f:
+        json.dump(payroll_records, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -300,10 +316,14 @@ def signup():
     phone = data.get('phone', '')
     qualification = data.get('qualification', '')
 
+    logger.info(f"Signup attempt for email: {email}, role: {role}")
+
     if not email or not password or not role or not name:
+        logger.warning("Signup failed: Missing required fields")
         return jsonify({'error': 'Missing required fields'}), 400
 
     if any(u['email'] == email for u in users):
+        logger.warning(f"Signup failed: User already exists with email {email}")
         return jsonify({'error': 'User already exists'}), 400
 
     user = {
@@ -317,6 +337,7 @@ def signup():
     }
     users.append(user)
     save_users()
+    logger.info(f"User created successfully: {user['id']}")
     return jsonify({'message': 'User created successfully', 'user': {k: v for k, v in user.items() if k != 'password'}})
 
 @app.route('/api/login', methods=['POST'])
@@ -326,10 +347,14 @@ def login():
     password = data.get('password')
     role = data.get('role')
 
+    logger.info(f"Login attempt for email: {email}, role: {role}")
+
     user = next((u for u in users if u['email'] == email and u['role'] == role), None)
     if not user or user['password'] != hash_password(password):
+        logger.warning(f"Login failed for email: {email}")
         return jsonify({'error': 'Invalid credentials'}), 401
 
+    logger.info(f"Login successful for user: {user['id']}")
     return jsonify({'message': 'Login successful', 'user': {k: v for k, v in user.items() if k != 'password'}})
 
 @app.route('/api/update_profile', methods=['PUT'])
@@ -387,22 +412,26 @@ def checkin():
     user_role = request.headers.get('X-User-Role')
 
     if not user_email or not user_role:
+        logger.warning("Check-in request without authentication")
         return jsonify({'error': 'Authentication required'}), 401
 
     user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
     if not user:
+        logger.warning(f"Check-in request for non-existent user: {user_email}")
         return jsonify({'error': 'User not found'}), 404
 
     today = datetime.now().strftime('%Y-%m-%d')
     # Check if already checked in today
     existing = next((r for r in attendance_records if r['employeeId'] == user['id'] and r['date'] == today), None)
     if existing and existing['checkIn']:
+        logger.warning(f"User {user['id']} attempted to check in again on {today}")
         return jsonify({'error': 'Already checked in today'}), 400
 
     checkin_time = datetime.now().strftime('%I:%M %p')
     if existing:
         existing['checkIn'] = checkin_time
         existing['status'] = 'Present'
+        logger.info(f"User {user['id']} updated check-in time to {checkin_time} on {today}")
     else:
         record = {
             'id': len(attendance_records) + 1,
@@ -414,6 +443,7 @@ def checkin():
             'status': 'Present'
         }
         attendance_records.append(record)
+        logger.info(f"User {user['id']} checked in at {checkin_time} on {today}")
 
     save_attendance()
     return jsonify({'message': 'Checked in successfully', 'checkInTime': checkin_time})
@@ -424,10 +454,12 @@ def checkout():
     user_role = request.headers.get('X-User-Role')
 
     if not user_email or not user_role:
+        logger.warning("Check-out request without authentication")
         return jsonify({'error': 'Authentication required'}), 401
 
     user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
     if not user:
+        logger.warning(f"Check-out request for non-existent user: {user_email}")
         return jsonify({'error': 'User not found'}), 404
 
     now = datetime.now()
@@ -442,9 +474,11 @@ def checkout():
         record = next((r for r in attendance_records if r['employeeId'] == user['id'] and r['date'] == yesterday and r['checkIn'] and not r['checkOut']), None)
 
     if not record or not record['checkIn']:
+        logger.warning(f"No open check-in found for user {user['id']}")
         return jsonify({'error': 'No open check-in found'}), 400
 
     if record['checkOut']:
+        logger.warning(f"User {user['id']} attempted to check out again")
         return jsonify({'error': 'Already checked out'}), 400
 
     checkout_time = now.strftime('%I:%M %p')
@@ -460,6 +494,8 @@ def checkout():
 
     hours = (checkout_datetime - checkin_datetime).total_seconds() / 3600
     record['hours'] = round(hours, 1)
+
+    logger.info(f"User {user['id']} checked out at {checkout_time}, worked {record['hours']} hours")
 
     save_attendance()
     return jsonify({'message': 'Checked out successfully', 'checkOutTime': checkout_time, 'hours': record['hours']})
@@ -1543,9 +1579,9 @@ def download_document(document_id):
 def uploaded_file(filename):
     return send_from_directory(str(BASE_DIR / "uploads"), filename)
 
-# Chatbot endpoint
-@app.route('/api/chat', methods=['POST'])
-def chat():
+# Salary management endpoints
+@app.route('/api/salaries', methods=['GET'])
+def get_salaries():
     user_email = request.headers.get('X-User-Email')
     user_role = request.headers.get('X-User-Role')
 
@@ -1556,14 +1592,274 @@ def chat():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
+    if user_role == 'hr':
+        # HR can see all salaries
+        salaries = payroll_records
+    else:
+        # Employees can only see their own salary
+        salaries = [s for s in payroll_records if s['employeeId'] == user['id'] and s['type'] == 'salary']
+
+    # Add employee names to records
+    for salary in salaries:
+        employee = next((u for u in users if u['id'] == salary['employeeId']), None)
+        salary['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'salaries': salaries})
+
+@app.route('/api/salaries', methods=['POST'])
+def create_salary():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can create salaries'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    employee_id = data.get('employeeId')
+    basic_salary = data.get('basicSalary')
+    allowances = data.get('allowances', {})
+    deductions = data.get('deductions', {})
+
+    if not employee_id or basic_salary is None:
+        return jsonify({'error': 'Employee ID and basic salary are required'}), 400
+
+    if basic_salary < 0:
+        return jsonify({'error': 'Basic salary cannot be negative'}), 400
+
+    # Check if employee exists
+    employee = next((u for u in users if u['id'] == employee_id), None)
+    if not employee:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    # Check if salary already exists for this employee
+    existing_salary = next((s for s in payroll_records if s['employeeId'] == employee_id and s['type'] == 'salary'), None)
+    if existing_salary:
+        return jsonify({'error': 'Salary already exists for this employee'}), 400
+
+    salary = {
+        'id': len(payroll_records) + 1,
+        'employeeId': employee_id,
+        'type': 'salary',
+        'basicSalary': float(basic_salary),
+        'allowances': allowances,
+        'deductions': deductions,
+        'createdAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'updatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    payroll_records.append(salary)
+    save_payroll()
+
+    return jsonify({'message': 'Salary created successfully', 'salary': salary})
+
+@app.route('/api/salaries/<int:salary_id>', methods=['PUT'])
+def update_salary(salary_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can update salaries'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    salary = next((s for s in payroll_records if s['id'] == salary_id and s['type'] == 'salary'), None)
+    if not salary:
+        return jsonify({'error': 'Salary not found'}), 404
+
+    data = request.json
+    for field in ['basicSalary', 'allowances', 'deductions']:
+        if field in data:
+            if field == 'basicSalary':
+                if data[field] < 0:
+                    return jsonify({'error': 'Basic salary cannot be negative'}), 400
+                salary[field] = float(data[field])
+            else:
+                salary[field] = data[field]
+
+    salary['updatedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    save_payroll()
+    return jsonify({'message': 'Salary updated successfully', 'salary': salary})
+
+# Payroll processing endpoints
+@app.route('/api/payroll/process', methods=['POST'])
+def process_payroll():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can process payroll'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    month = data.get('month')
+    year = data.get('year')
+
+    if not month or not year:
+        return jsonify({'error': 'Month and year are required'}), 400
+
+    try:
+        month = int(month)
+        year = int(year)
+        if not (1 <= month <= 12):
+            return jsonify({'error': 'Invalid month'}), 400
+        if year < 2020 or year > 2030:
+            return jsonify({'error': 'Invalid year'}), 400
+    except ValueError:
+        return jsonify({'error': 'Month and year must be numbers'}), 400
+
+    period = f"{year:04d}-{month:02d}"
+
+    # Check if payroll already processed for this period
+    existing_payslips = [p for p in payroll_records if p['type'] == 'payslip' and p.get('period') == period]
+    if existing_payslips:
+        return jsonify({'error': f'Payroll already processed for {period}'}), 400
+
+    # Get all active salaries
+    salaries = [s for s in payroll_records if s['type'] == 'salary']
+
+    payslips = []
+    for salary in salaries:
+        # Calculate total allowances and deductions
+        total_allowances = sum(salary['allowances'].values()) if salary['allowances'] else 0
+        total_deductions = sum(salary['deductions'].values()) if salary['deductions'] else 0
+
+        # Calculate gross and net salary
+        gross_salary = salary['basicSalary'] + total_allowances
+        net_salary = gross_salary - total_deductions
+
+        payslip = {
+            'id': len(payroll_records) + len(payslips) + 1,
+            'employeeId': salary['employeeId'],
+            'type': 'payslip',
+            'period': period,
+            'basicSalary': salary['basicSalary'],
+            'allowances': salary['allowances'],
+            'deductions': salary['deductions'],
+            'grossSalary': gross_salary,
+            'netSalary': net_salary,
+            'processedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'processedBy': user['id']
+        }
+        payslips.append(payslip)
+
+    # Save all payslips
+    payroll_records.extend(payslips)
+    save_payroll()
+
+    return jsonify({
+        'message': f'Payroll processed successfully for {period}',
+        'payslips': payslips,
+        'count': len(payslips)
+    })
+
+# Payslip endpoints
+@app.route('/api/payslips', methods=['GET'])
+def get_payslips():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get query parameters
+    period = request.args.get('period')
+
+    if user_role == 'hr':
+        # HR can see all payslips
+        payslips = [p for p in payroll_records if p['type'] == 'payslip']
+    else:
+        # Employees can only see their own payslips
+        payslips = [p for p in payroll_records if p['type'] == 'payslip' and p['employeeId'] == user['id']]
+
+    # Filter by period if provided
+    if period:
+        payslips = [p for p in payslips if p.get('period') == period]
+
+    # Sort by period descending
+    payslips.sort(key=lambda x: x.get('period', ''), reverse=True)
+
+    # Add employee names to records
+    for payslip in payslips:
+        employee = next((u for u in users if u['id'] == payslip['employeeId']), None)
+        payslip['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'payslips': payslips})
+
+@app.route('/api/payslips/<int:payslip_id>', methods=['GET'])
+def get_payslip(payslip_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    payslip = next((p for p in payroll_records if p['id'] == payslip_id and p['type'] == 'payslip'), None)
+    if not payslip:
+        return jsonify({'error': 'Payslip not found'}), 404
+
+    # Only HR or the payslip owner can view
+    if user_role != 'hr' and payslip['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Add employee name
+    employee = next((u for u in users if u['id'] == payslip['employeeId']), None)
+    payslip['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'payslip': payslip})
+
+# Chatbot endpoint
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        logger.warning("Chat request without authentication headers")
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        logger.warning(f"Chat request for non-existent user: {user_email}")
+        return jsonify({'error': 'User not found'}), 404
+
     data = request.json
     message = data.get('message', '')
 
     if not message:
+        logger.warning(f"Empty message from user {user['id']}")
         return jsonify({'error': 'Message is required'}), 400
+
+    logger.info(f"Chat request from user {user['id']}: {message[:50]}...")
 
     chatbot = get_chatbot(BASE_DIR)
     response = chatbot.get_response(user['id'], message)
+
+    logger.info(f"Chat response to user {user['id']}: {response[:50]}...")
 
     return jsonify({'response': response})
 

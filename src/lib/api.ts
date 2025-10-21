@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
 export const api = {
   login: async (credentials: { email: string; password: string; role: string }) => {
@@ -720,5 +720,68 @@ export const api = {
       throw new Error(error.error || 'Failed to download document');
     }
     return response.blob();
+  },
+  getSalaries: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/salaries`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch salaries');
+    }
+    return response.json();
+  },
+  updateSalary: async (salaryId: number, data: any) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/salaries/${salaryId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update salary');
+    }
+    return response.json();
+  },
+  createSalary: async (data: {
+    employeeId: number;
+    basicSalary: number;
+    allowances?: Record<string, number>;
+    deductions?: Record<string, number>;
+  }) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/salaries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create salary');
+    }
+    return response.json();
   },
 };

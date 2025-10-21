@@ -1,0 +1,1 @@
+[{"id": 1, "employeeId": 1, "type": "salary", "basicSalary": 9500.0, "allowances": {"total": 5000}, "deductions": {"total": 8500}, "createdAt": "2025-10-21 21:32:11", "updatedAt": "2025-10-21 21:42:21", "employeeName": "jhon"}]
