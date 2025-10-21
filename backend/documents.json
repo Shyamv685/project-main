@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "employeeId": 33,
+    "documentType": "voter_id",
+    "description": "",
+    "filename": "doc_33_voter_id_1761021078878.pdf",
+    "fileUrl": "/uploads/doc_33_voter_id_1761021078878.pdf",
+    "uploadedAt": "2025-10-21T04:31:18.881Z",
+    "status": "pending",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "comments": null
+  },
+  {
+    "id": 2,
+    "employeeId": 37,
+    "documentType": "driving_license",
+    "description": "",
+    "filename": "doc_37_driving_license_1761021209948.pdf",
+    "fileUrl": "/uploads/doc_37_driving_license_1761021209948.pdf",
+    "uploadedAt": "2025-10-21T04:33:29.951Z",
+    "status": "pending",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "comments": null
+  }
+]

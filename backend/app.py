@@ -275,6 +275,17 @@ def save_announcements():
     with ANNOUNCEMENTS_FILE.open('w') as f:
         json.dump(announcements_records, f)
 
+# In-memory documents storage (for demo, persist to file)
+DOCUMENTS_FILE = BASE_DIR / "documents.json"
+documents_records = []
+if DOCUMENTS_FILE.exists():
+    with DOCUMENTS_FILE.open() as f:
+        documents_records = json.load(f)
+
+def save_documents():
+    with DOCUMENTS_FILE.open('w') as f:
+        json.dump(documents_records, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -1383,6 +1394,149 @@ def delete_announcement(announcement_id):
     announcements_records.remove(announcement)
     save_announcements()
     return jsonify({'message': 'Announcement deleted successfully'})
+
+# Documents endpoints
+@app.route('/api/documents', methods=['GET'])
+def get_documents():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user_role == 'hr':
+        # HR can see all documents
+        records = documents_records
+    else:
+        # Employees can only see their own documents
+        records = [d for d in documents_records if d['employeeId'] == user['id']]
+
+    # Sort by upload date descending
+    records.sort(key=lambda x: x['uploadedAt'], reverse=True)
+
+    # Add employee names to records
+    for record in records:
+        employee = next((u for u in users if u['id'] == record['employeeId']), None)
+        record['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'documents': records})
+
+@app.route('/api/documents', methods=['POST'])
+def upload_document():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    document_type = request.form.get('documentType')
+    description = request.form.get('description', '')
+
+    if not file or not document_type:
+        return jsonify({'error': 'File and document type are required'}), 400
+
+    # Validate file type
+    allowed_extensions = {'pdf', 'jpg', 'jpeg', 'png'}
+    if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+        return jsonify({'error': 'Invalid file type. Only PDF and image files are allowed'}), 400
+
+    # Validate file size (10MB limit)
+    if len(file.read()) > 10 * 1024 * 1024:
+        return jsonify({'error': 'File size too large. Maximum 10MB allowed'}), 400
+    file.seek(0)  # Reset file pointer
+
+    # Save file
+    filename = f"doc_{user['id']}_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file.filename.rsplit('.', 1)[1].lower()}"
+    upload_dir = BASE_DIR / "uploads"
+    upload_dir.mkdir(exist_ok=True)
+    file_path = upload_dir / filename
+    file.save(str(file_path))
+
+    document = {
+        'id': len(documents_records) + 1,
+        'employeeId': user['id'],
+        'documentType': document_type,
+        'description': description,
+        'filename': filename,
+        'fileUrl': f'/uploads/{filename}',
+        'uploadedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'status': 'pending',  # pending, verified, rejected
+        'reviewedBy': None,
+        'reviewedAt': None,
+        'comments': None
+    }
+    documents_records.append(document)
+    save_documents()
+
+    return jsonify({'message': 'Document uploaded successfully', 'document': document})
+
+@app.route('/api/documents/<int:document_id>/status', methods=['PUT'])
+def update_document_status(document_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'hr':
+        return jsonify({'error': 'Only HR can update document status'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    document = next((d for d in documents_records if d['id'] == document_id), None)
+    if not document:
+        return jsonify({'error': 'Document not found'}), 404
+
+    data = request.json
+    status = data.get('status')
+    comments = data.get('comments', '')
+
+    if status not in ['pending', 'verified', 'rejected']:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    document['status'] = status
+    document['reviewedBy'] = user['id']
+    document['reviewedAt'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    document['comments'] = comments
+
+    save_documents()
+    return jsonify({'message': 'Document status updated successfully', 'document': document})
+
+@app.route('/api/documents/<int:document_id>/download', methods=['GET'])
+def download_document(document_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    document = next((d for d in documents_records if d['id'] == document_id), None)
+    if not document:
+        return jsonify({'error': 'Document not found'}), 404
+
+    # Only HR or the document owner can download
+    if user_role != 'hr' and document['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    return send_from_directory(str(BASE_DIR / "uploads"), document['filename'], as_attachment=True)
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')

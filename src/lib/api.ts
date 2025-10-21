@@ -646,4 +646,79 @@ export const api = {
     }
     return response.json();
   },
+  uploadDocument: async (data: FormData) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/documents`, {
+      method: 'POST',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: data,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Document upload failed');
+    }
+    return response.json();
+  },
+  getDocuments: async () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/documents`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch documents');
+    }
+    return response.json();
+  },
+  updateDocumentStatus: async (id: number, data: { status: string; comments?: string }) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/documents/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update document status');
+    }
+    return response.json();
+  },
+  downloadDocument: async (id: number) => {
+    const userData = localStorage.getItem('user');
+    if (!userData) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userData);
+    const response = await fetch(`${API_BASE_URL}/documents/${id}/download`, {
+      method: 'GET',
+      headers: {
+        'X-User-Email': user.email,
+        'X-User-Role': user.role
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to download document');
+    }
+    return response.blob();
+  },
 };

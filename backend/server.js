@@ -72,6 +72,7 @@ let enrollmentsRecords = loadJsonFile('enrollments.json');
 let certificatesRecords = loadJsonFile('certificates.json');
 let feedbacksRecords = loadJsonFile('feedbacks.json');
 let announcementsRecords = loadJsonFile('announcements.json');
+let documentsRecords = loadJsonFile('documents.json');
 
 // Save functions
 function saveUsers() { saveJsonFile('users.json', users); }
@@ -84,6 +85,7 @@ function saveEnrollments() { saveJsonFile('enrollments.json', enrollmentsRecords
 function saveCertificates() { saveJsonFile('certificates.json', certificatesRecords); }
 function saveFeedbacks() { saveJsonFile('feedbacks.json', feedbacksRecords); }
 function saveAnnouncements() { saveJsonFile('announcements.json', announcementsRecords); }
+function saveDocuments() { saveJsonFile('documents.json', documentsRecords); }
 
 // Authentication middleware
 function requireAuth(req, res, next) {
@@ -969,6 +971,135 @@ app.delete('/api/announcements/:announcementId', requireAuth, (req, res) => {
     announcementsRecords.splice(announcementIndex, 1);
     saveAnnouncements();
     res.json({ message: 'Announcement deleted successfully' });
+});
+
+// Documents routes
+app.get('/api/documents', requireAuth, (req, res) => {
+    const user = req.user;
+
+    let documents;
+    if (user.role === 'hr') {
+        documents = documentsRecords;
+    } else {
+        documents = documentsRecords.filter(d => d.employeeId === user.id);
+    }
+
+    documents.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+
+    documents.forEach(document => {
+        const employee = users.find(u => u.id === document.employeeId);
+        document.employeeName = employee ? employee.name : 'Unknown';
+    });
+
+    res.json({ documents });
+});
+
+app.post('/api/documents', upload.single('file'), requireAuth, (req, res) => {
+    const user = req.user;
+    const { documentType, description } = req.body;
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    if (!documentType) {
+        return res.status(400).json({ error: 'Document type is required' });
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: 'Invalid file type. Only PDF and image files are allowed' });
+    }
+
+    // Validate file size (10MB limit)
+    if (req.file.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: 'File size too large. Maximum 10MB allowed' });
+    }
+
+    const filename = `doc_${user.id}_${documentType.replace(/\s+/g, '_')}_${Date.now()}.${req.file.originalname.split('.').pop()}`;
+    const filePath = path.join(BASE_DIR, 'uploads', filename);
+
+    // Move file to correct location
+    fs.renameSync(req.file.path, filePath);
+
+    const document = {
+        id: documentsRecords.length + 1,
+        employeeId: user.id,
+        documentType,
+        description: description || '',
+        filename,
+        fileUrl: `/uploads/${filename}`,
+        uploadedAt: new Date().toISOString(),
+        status: 'pending',
+        reviewedBy: null,
+        reviewedAt: null,
+        comments: null
+    };
+
+    documentsRecords.push(document);
+    saveDocuments();
+    res.json({ message: 'Document uploaded successfully', document });
+});
+
+app.put('/api/documents/:documentId', requireAuth, (req, res) => {
+    const user = req.user;
+    const documentId = parseInt(req.params.documentId);
+    const document = documentsRecords.find(d => d.id === documentId);
+
+    if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+    }
+
+    if (user.role !== 'hr' && document.employeeId !== user.id) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const { documentType, description, status, comments } = req.body;
+
+    if (documentType) document.documentType = documentType;
+    if (description !== undefined) document.description = description;
+
+    // HR can update status and comments
+    if (user.role === 'hr') {
+        if (status) {
+            document.status = status;
+            if (status === 'approved' || status === 'rejected') {
+                document.reviewedBy = user.id;
+                document.reviewedAt = new Date().toISOString();
+            }
+        }
+        if (comments !== undefined) document.comments = comments;
+    }
+
+    saveDocuments();
+    res.json({ message: 'Document updated successfully', document });
+});
+
+app.delete('/api/documents/:documentId', requireAuth, (req, res) => {
+    const user = req.user;
+    const documentId = parseInt(req.params.documentId);
+    const documentIndex = documentsRecords.findIndex(d => d.id === documentId);
+
+    if (documentIndex === -1) {
+        return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const document = documentsRecords[documentIndex];
+
+    if (user.role !== 'hr' && document.uploadedBy !== user.id) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Remove file from filesystem
+    const filePath = path.join(BASE_DIR, 'uploads', path.basename(document.fileUrl));
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+
+    documentsRecords.splice(documentIndex, 1);
+    saveDocuments();
+    res.json({ message: 'Document deleted successfully' });
 });
 
 // File serving

@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Phone, Mail, Shield, Upload, Camera, X } from "lucide-react";
+import { User, Phone, Mail, Shield, Upload, Camera, X, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import DocumentUpload from "../documents/DocumentUpload";
+import DocumentList from "../documents/DocumentList";
 
 export default function ProfileForm() {
+  const [activeTab, setActiveTab] = useState<'profile' | 'documents'>('profile');
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [qualification, setQualification] = useState("");
@@ -104,9 +107,41 @@ export default function ProfileForm() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex">
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'profile'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <User className="w-4 h-4 inline mr-2" />
+            Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('documents')}
+            className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'documents'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            Documents
+          </button>
+        </nav>
+      </div>
+
+      <div className="p-6">
+        {activeTab === 'profile' ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile Picture Section */}
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
@@ -250,7 +285,17 @@ export default function ProfileForm() {
         >
           {isLoading ? "Updating..." : "Update Profile"}
         </button>
-      </form>
+          </form>
+        ) : (
+          <div className="space-y-6">
+            <DocumentUpload onUploadSuccess={() => {
+              // Refresh documents list if needed
+              window.location.reload();
+            }} />
+            <DocumentList />
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
