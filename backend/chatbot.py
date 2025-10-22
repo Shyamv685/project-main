@@ -11,6 +11,7 @@ class HRChatBot:
         self.attendance_file = self.base_dir / "attendance.json"
         self.leaves_file = self.base_dir / "leaves.json"
         self.timesheets_file = self.base_dir / "timesheets.json"
+        # Note: leaves.json might not exist, but that's handled in load_json
 
         # Load data
         self.users = self.load_json(self.users_file) if self.users_file.exists() else []

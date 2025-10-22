@@ -85,27 +85,25 @@ export default function LoginForm() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Role
           </label>
-          <div className="flex space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="employee"
-                checked={role === 'employee'}
-                onChange={(e) => setRole(e.target.value as 'employee')}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Employee</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="hr"
-                checked={role === 'hr'}
-                onChange={(e) => setRole(e.target.value as 'hr')}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">HR</span>
-            </label>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setRole('employee')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                role === 'employee' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Employee
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('hr')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                role === 'hr' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              HR
+            </button>
           </div>
         </div>
 
