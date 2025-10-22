@@ -4,12 +4,13 @@ import LeaveTable from "@/components/leave/LeaveTable";
 import LeaveRequestForm from "@/components/leave/LeaveRequestForm";
 import Modal from "@/components/common/Modal";
 import Alert from "@/components/common/Alert";
-import { leaveRequests } from "@/data/dummyData";
+import { api } from "@/lib/api";
 
 export default function Leave() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("employee");
-  const [leaveData, setLeaveData] = useState(leaveRequests);
+  const [leaveData, setLeaveData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
@@ -22,67 +23,152 @@ export default function Leave() {
       const userData = JSON.parse(user);
       setUserRole(userData.role);
     }
+    fetchLeaves();
   }, []);
 
-  const handleSubmit = (data: any) => {
-    console.log("Leave request:", data);
-
-    // Get current user data
-    const user = localStorage.getItem('user');
-    const userData = user ? JSON.parse(user) : null;
-
-    if (userData && userRole === "employee") {
-      // Create new leave request for employee
-      const newLeaveRequest = {
-        id: leaveData.length + 1,
-        employeeId: userData.id || 1,
-        employeeName: userData.name || "Current User",
-        leaveType: data.leaveType,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        days: data.days,
-        reason: data.reason,
-        status: "Pending",
-        appliedDate: new Date().toISOString().split('T')[0]
-      };
-
-      // Add to leave data
-      setLeaveData(prev => [...prev, newLeaveRequest]);
+  const fetchLeaves = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/leaves', {
+        headers: {
+          'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
+          'X-User-Role': JSON.parse(localStorage.getItem('user') || '{}').role
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLeaveData(data.leaves);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaves:', error);
+    } finally {
+      setLoading(false);
     }
-
-    setIsModalOpen(false);
-    setAlert({
-      type: "success",
-      message: "Leave request submitted successfully!",
-      isVisible: true
-    });
-    setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
   };
 
-  const handleApprove = (id: number) => {
-    console.log("Approve leave:", id);
-    setLeaveData(prev => prev.map(request =>
-      request.id === id ? { ...request, status: "Approved" } : request
-    ));
-    setAlert({
-      type: "success",
-      message: "Leave request approved!",
-      isVisible: true
-    });
-    setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+  const handleSubmit = async (data: any) => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/leaves', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
+          'X-User-Role': JSON.parse(localStorage.getItem('user') || '{}').role
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setLeaveData(prev => [result.leave, ...prev]);
+        setIsModalOpen(false);
+        setAlert({
+          type: "success",
+          message: "Leave request submitted successfully!",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      } else {
+        const error = await response.json();
+        setAlert({
+          type: "error",
+          message: error.error || "Failed to submit leave request",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      }
+    } catch (error) {
+      console.error('Failed to submit leave request:', error);
+      setAlert({
+        type: "error",
+        message: "Failed to submit leave request",
+        isVisible: true
+      });
+      setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+    }
   };
 
-  const handleReject = (id: number) => {
-    console.log("Reject leave:", id);
-    setLeaveData(prev => prev.map(request =>
-      request.id === id ? { ...request, status: "Rejected" } : request
-    ));
-    setAlert({
-      type: "error",
-      message: "Leave request rejected!",
-      isVisible: true
-    });
-    setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+  const handleApprove = async (id: number) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/api/leaves/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
+          'X-User-Role': JSON.parse(localStorage.getItem('user') || '{}').role
+        },
+        body: JSON.stringify({ status: 'Approved' })
+      });
+
+      if (response.ok) {
+        setLeaveData(prev => prev.map(request =>
+          request.id === id ? { ...request, status: "Approved" } : request
+        ));
+        setAlert({
+          type: "success",
+          message: "Leave request approved!",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      } else {
+        const error = await response.json();
+        setAlert({
+          type: "error",
+          message: error.error || "Failed to approve leave request",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      }
+    } catch (error) {
+      console.error('Failed to approve leave request:', error);
+      setAlert({
+        type: "error",
+        message: "Failed to approve leave request",
+        isVisible: true
+      });
+      setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/api/leaves/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
+          'X-User-Role': JSON.parse(localStorage.getItem('user') || '{}').role
+        },
+        body: JSON.stringify({ status: 'Rejected' })
+      });
+
+      if (response.ok) {
+        setLeaveData(prev => prev.map(request =>
+          request.id === id ? { ...request, status: "Rejected" } : request
+        ));
+        setAlert({
+          type: "error",
+          message: "Leave request rejected!",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      } else {
+        const error = await response.json();
+        setAlert({
+          type: "error",
+          message: error.error || "Failed to reject leave request",
+          isVisible: true
+        });
+        setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+      }
+    } catch (error) {
+      console.error('Failed to reject leave request:', error);
+      setAlert({
+        type: "error",
+        message: "Failed to reject leave request",
+        isVisible: true
+      });
+      setTimeout(() => setAlert((prev) => ({ ...prev, isVisible: false })), 3000);
+    }
   };
 
   return (
@@ -107,7 +193,11 @@ export default function Leave() {
         isVisible={alert.isVisible}
       />
 
-      <LeaveTable onApprove={handleApprove} onReject={handleReject} userRole={userRole} leaveData={leaveData} />
+      {loading ? (
+        <div className="text-center py-8">Loading leave requests...</div>
+      ) : (
+        <LeaveTable onApprove={handleApprove} onReject={handleReject} userRole={userRole} leaveData={leaveData} />
+      )}
 
       <Modal
         isOpen={isModalOpen}

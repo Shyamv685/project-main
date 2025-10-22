@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 export default function LoginForm() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [role, setRole] = useState<'hr' | 'employee'>('employee');
+  const [role, setRole] = useState<'hr' | 'employee' | 'admin'>('employee');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -85,11 +85,11 @@ export default function LoginForm() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Role
           </label>
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="grid grid-cols-3 bg-gray-100 rounded-lg p-1">
             <button
               type="button"
               onClick={() => setRole('employee')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 role === 'employee' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -98,11 +98,20 @@ export default function LoginForm() {
             <button
               type="button"
               onClick={() => setRole('hr')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 role === 'hr' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               HR
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('admin')}
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                role === 'admin' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Admin
             </button>
           </div>
         </div>

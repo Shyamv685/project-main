@@ -302,6 +302,35 @@ def save_payroll():
     with PAYROLL_FILE.open('w') as f:
         json.dump(payroll_records, f)
 
+# In-memory leave storage (for demo, persist to file)
+LEAVE_FILE = BASE_DIR / "leaves.json"
+leave_records = []
+if LEAVE_FILE.exists():
+    with LEAVE_FILE.open() as f:
+        leave_records = json.load(f)
+
+def save_leaves():
+    with LEAVE_FILE.open('w') as f:
+        json.dump(leave_records, f)
+
+# In-memory settings storage (for demo, persist to file)
+SETTINGS_FILE = BASE_DIR / "settings.json"
+settings = {
+    'companyName': '',
+    'companyEmail': '',
+    'companyPhone': '',
+    'workingHours': {'start': '09:00', 'end': '17:00'},
+    'leavePolicy': {'annualLeave': 25, 'sickLeave': 10},
+    'notifications': {'email': True, 'sms': False}
+}
+if SETTINGS_FILE.exists():
+    with SETTINGS_FILE.open() as f:
+        settings = json.load(f)
+
+def save_settings():
+    with SETTINGS_FILE.open('w') as f:
+        json.dump(settings, f)
+
 def hash_password(password):
     import hashlib
     return hashlib.sha256(password.encode()).hexdigest()
@@ -1831,6 +1860,283 @@ def get_payslip(payslip_id):
     payslip['employeeName'] = employee['name'] if employee else 'Unknown'
 
     return jsonify({'payslip': payslip})
+
+# Admin endpoints
+@app.route('/api/admin/users', methods=['GET'])
+def get_users():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Return all users without passwords
+    users_list = [{k: v for k, v in u.items() if k != 'password'} for u in users]
+    return jsonify({'users': users_list})
+
+@app.route('/api/admin/users', methods=['POST'])
+def create_user():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role')
+    name = data.get('name')
+    phone = data.get('phone', '')
+    qualification = data.get('qualification', '')
+
+    if not email or not password or not role or not name:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    if any(u['email'] == email for u in users):
+        return jsonify({'error': 'User already exists'}), 400
+
+    new_user = {
+        'id': len(users) + 1,
+        'email': email,
+        'password': hash_password(password),
+        'role': role,
+        'name': name,
+        'phone': phone,
+        'qualification': qualification
+    }
+    users.append(new_user)
+    save_users()
+    return jsonify({'message': 'User created successfully', 'user': {k: v for k, v in new_user.items() if k != 'password'}})
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    target_user = next((u for u in users if u['id'] == user_id), None)
+    if not target_user:
+        return jsonify({'error': 'Target user not found'}), 404
+
+    data = request.json
+    for field in ['email', 'role', 'name', 'phone', 'qualification']:
+        if field in data:
+            target_user[field] = data[field]
+
+    if 'password' in data and data['password']:
+        target_user['password'] = hash_password(data['password'])
+
+    save_users()
+    return jsonify({'message': 'User updated successfully', 'user': {k: v for k, v in target_user.items() if k != 'password'}})
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    target_user = next((u for u in users if u['id'] == user_id), None)
+    if not target_user:
+        return jsonify({'error': 'Target user not found'}), 404
+
+    users.remove(target_user)
+    save_users()
+    return jsonify({'message': 'User deleted successfully'})
+
+@app.route('/api/admin/settings', methods=['GET'])
+def get_settings():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    return jsonify(settings)
+
+@app.route('/api/admin/settings', methods=['PUT'])
+def update_settings():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if user_role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    global settings
+    for key, value in data.items():
+        if key in settings:
+            settings[key] = value
+
+    save_settings()
+    return jsonify({'message': 'Settings updated successfully', 'settings': settings})
+
+@app.route('/api/welcome', methods=['GET'])
+def welcome():
+    logger.info(f"Request received: {request.method} {request.path}")
+    return jsonify({'message': 'Welcome to the Flask API Service!'})
+
+# Leave endpoints
+@app.route('/api/leaves', methods=['GET'])
+def get_leaves():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user_role == 'hr':
+        # HR can see all leave requests
+        records = leave_records
+    else:
+        # Employees can only see their own leave requests
+        records = [r for r in leave_records if r['employeeId'] == user['id']]
+
+    # Sort by applied date descending
+    records.sort(key=lambda x: x['appliedDate'], reverse=True)
+
+    # Add employee names to records
+    for record in records:
+        employee = next((u for u in users if u['id'] == record['employeeId']), None)
+        record['employeeName'] = employee['name'] if employee else 'Unknown'
+
+    return jsonify({'leaves': records})
+
+@app.route('/api/leaves', methods=['POST'])
+def create_leave():
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.json
+    leave_type = data.get('leaveType')
+    start_date = data.get('startDate')
+    end_date = data.get('endDate')
+    reason = data.get('reason', '')
+
+    if not all([leave_type, start_date, end_date]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Calculate number of days
+    from datetime import datetime
+    start = datetime.strptime(start_date, '%Y-%m-%d')
+    end = datetime.strptime(end_date, '%Y-%m-%d')
+    days = (end - start).days + 1  # Include both start and end dates
+
+    if days <= 0:
+        return jsonify({'error': 'End date must be after start date'}), 400
+
+    leave = {
+        'id': len(leave_records) + 1,
+        'employeeId': user['id'],
+        'leaveType': leave_type,
+        'startDate': start_date,
+        'endDate': end_date,
+        'days': days,
+        'reason': reason,
+        'status': 'Pending',
+        'appliedDate': datetime.now().strftime('%Y-%m-%d')
+    }
+    leave_records.append(leave)
+    save_leaves()
+
+    return jsonify({'message': 'Leave request submitted successfully', 'leave': leave})
+
+@app.route('/api/leaves/<int:leave_id>', methods=['PUT'])
+def update_leave(leave_id):
+    user_email = request.headers.get('X-User-Email')
+    user_role = request.headers.get('X-User-Role')
+
+    if not user_email or not user_role:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user = next((u for u in users if u['email'] == user_email and u['role'] == user_role), None)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    leave = next((l for l in leave_records if l['id'] == leave_id), None)
+    if not leave:
+        return jsonify({'error': 'Leave request not found'}), 404
+
+    # Only HR can update status, employees can only update their own pending requests
+    if user_role != 'hr' and leave['employeeId'] != user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.json
+    if 'status' in data and user_role == 'hr':
+        if data['status'] not in ['Pending', 'Approved', 'Rejected']:
+            return jsonify({'error': 'Invalid status'}), 400
+        leave['status'] = data['status']
+    elif user_role != 'hr' and leave['status'] == 'Pending':
+        # Employees can update details but not status
+        for field in ['leaveType', 'startDate', 'endDate', 'reason']:
+            if field in data:
+                leave[field] = data[field]
+                if field in ['startDate', 'endDate']:
+                    # Recalculate days if dates changed
+                    from datetime import datetime
+                    start = datetime.strptime(leave['startDate'], '%Y-%m-%d')
+                    end = datetime.strptime(leave['endDate'], '%Y-%m-%d')
+                    leave['days'] = (end - start).days + 1
+
+    save_leaves()
+    return jsonify({'message': 'Leave request updated successfully', 'leave': leave})
 
 # Chatbot endpoint
 @app.route('/api/chat', methods=['POST'])

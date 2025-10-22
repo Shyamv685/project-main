@@ -22,6 +22,7 @@ import Announcements from "./pages/Announcements";
 import Tripets from "./pages/Tripets";
 import Training from "./pages/Training";
 import Feedback from "./pages/Feedback";
+import Admin from "./pages/Admin";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -53,6 +54,7 @@ function App() {
           <Route path="tripets" element={<Tripets />} />
           <Route path="training" element={<Training />} />
           <Route path="feedback" element={<Feedback />} />
+          <Route path="admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

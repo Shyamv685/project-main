@@ -36,7 +36,8 @@ const allMenuItems = [
   { icon: Icons.User, label: "Profile", path: "/profile", roles: ["hr"] },
   { icon: Icons.Settings, label: "Settings", path: "/settings", roles: ["hr", "employee"] },
   { icon: Icons.Megaphone, label: "Announcements", path: "/announcements", roles: ["hr", "employee"] },
-  { icon: Icons.HelpCircle, label: "Help Centre", path: "/help-centre", roles: ["hr", "employee"] }
+  { icon: Icons.HelpCircle, label: "Help Centre", path: "/help-centre", roles: ["hr", "employee"] },
+  { icon: Icons.Shield, label: "Admin", path: "/admin", roles: ["admin"] }
 ];
 
 export default function SidebarMenu({ isCollapsed, onToggle, role }: SidebarMenuProps) {
