@@ -5,10 +5,14 @@ const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 const { getChatbot } = require('./chatbot');
+const { setupLogger } = require('./logger');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const BASE_DIR = __dirname;
+
+// Set up logger
+const logger = setupLogger();
 
 // Middleware
 app.use(cors());
@@ -73,6 +77,8 @@ let certificatesRecords = loadJsonFile('certificates.json');
 let feedbacksRecords = loadJsonFile('feedbacks.json');
 let announcementsRecords = loadJsonFile('announcements.json');
 let documentsRecords = loadJsonFile('documents.json');
+let payrollRecords = loadJsonFile('payroll.json');
+let leaveRecords = loadJsonFile('leaves.json');
 
 // Save functions
 function saveUsers() { saveJsonFile('users.json', users); }
@@ -86,6 +92,8 @@ function saveCertificates() { saveJsonFile('certificates.json', certificatesReco
 function saveFeedbacks() { saveJsonFile('feedbacks.json', feedbacksRecords); }
 function saveAnnouncements() { saveJsonFile('announcements.json', announcementsRecords); }
 function saveDocuments() { saveJsonFile('documents.json', documentsRecords); }
+function savePayroll() { saveJsonFile('payroll.json', payrollRecords); }
+function saveLeaves() { saveJsonFile('leaves.json', leaveRecords); }
 
 // Authentication middleware
 function requireAuth(req, res, next) {
@@ -1100,6 +1108,193 @@ app.delete('/api/documents/:documentId', requireAuth, (req, res) => {
     documentsRecords.splice(documentIndex, 1);
     saveDocuments();
     res.json({ message: 'Document deleted successfully' });
+});
+
+// Leave routes
+app.get('/api/leaves', requireAuth, (req, res) => {
+    const user = req.user;
+
+    let leaves;
+    if (user.role === 'hr') {
+        leaves = leaveRecords;
+    } else {
+        leaves = leaveRecords.filter(l => l.employeeId === user.id);
+    }
+
+    leaves.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    leaves.forEach(leave => {
+        const employee = users.find(u => u.id === leave.employeeId);
+        leave.employeeName = employee ? employee.name : 'Unknown';
+    });
+
+    res.json({ leaves });
+});
+
+app.post('/api/leaves', requireAuth, (req, res) => {
+    const user = req.user;
+    const { leaveType, startDate, endDate, reason } = req.body;
+
+    if (!leaveType || !startDate || !endDate) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const leave = {
+        id: leaveRecords.length + 1,
+        employeeId: user.id,
+        leaveType,
+        startDate,
+        endDate,
+        reason: reason || '',
+        status: 'Pending',
+        createdAt: new Date().toISOString(),
+        approvedAt: null,
+        approvedBy: null
+    };
+
+    leaveRecords.push(leave);
+    saveLeaves();
+    res.json({ message: 'Leave request submitted successfully', leave });
+});
+
+app.put('/api/leaves/:leaveId', requireAuth, (req, res) => {
+    const user = req.user;
+    const leaveId = parseInt(req.params.leaveId);
+    const leave = leaveRecords.find(l => l.id === leaveId);
+
+    if (!leave) {
+        return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    if (user.role !== 'hr' && leave.employeeId !== user.id) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const { status } = req.body;
+
+    if (status && user.role === 'hr') {
+        leave.status = status;
+        if (status === 'Approved') {
+            leave.approvedAt = new Date().toISOString();
+            leave.approvedBy = user.id;
+        }
+    }
+
+    saveLeaves();
+    res.json({ message: 'Leave request updated successfully', leave });
+});
+
+app.delete('/api/leaves/:leaveId', requireAuth, (req, res) => {
+    const user = req.user;
+    const leaveId = parseInt(req.params.leaveId);
+    const leaveIndex = leaveRecords.findIndex(l => l.id === leaveId);
+
+    if (leaveIndex === -1) {
+        return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    const leave = leaveRecords[leaveIndex];
+
+    if (user.role !== 'hr' && (leave.employeeId !== user.id || leave.status !== 'Pending')) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    leaveRecords.splice(leaveIndex, 1);
+    saveLeaves();
+    res.json({ message: 'Leave request deleted successfully' });
+});
+
+// Payroll routes
+app.get('/api/payroll', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can view payroll records' });
+    }
+
+    payrollRecords.sort((a, b) => new Date(b.payDate) - new Date(a.payDate));
+
+    payrollRecords.forEach(payroll => {
+        const employee = users.find(u => u.id === payroll.employeeId);
+        payroll.employeeName = employee ? employee.name : 'Unknown';
+    });
+
+    res.json({ payroll: payrollRecords });
+});
+
+app.post('/api/payroll', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can create payroll records' });
+    }
+
+    const { employeeId, payDate, basicSalary, allowances, deductions, netSalary } = req.body;
+
+    if (!employeeId || !payDate || netSalary === undefined) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const payroll = {
+        id: payrollRecords.length + 1,
+        employeeId,
+        payDate,
+        basicSalary: basicSalary || 0,
+        allowances: allowances || 0,
+        deductions: deductions || 0,
+        netSalary,
+        createdAt: new Date().toISOString(),
+        createdBy: user.id
+    };
+
+    payrollRecords.push(payroll);
+    savePayroll();
+    res.json({ message: 'Payroll record created successfully', payroll });
+});
+
+app.put('/api/payroll/:payrollId', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can update payroll records' });
+    }
+
+    const payrollId = parseInt(req.params.payrollId);
+    const payroll = payrollRecords.find(p => p.id === payrollId);
+
+    if (!payroll) {
+        return res.status(404).json({ error: 'Payroll record not found' });
+    }
+
+    const { payDate, basicSalary, allowances, deductions, netSalary } = req.body;
+
+    if (payDate) payroll.payDate = payDate;
+    if (basicSalary !== undefined) payroll.basicSalary = basicSalary;
+    if (allowances !== undefined) payroll.allowances = allowances;
+    if (deductions !== undefined) payroll.deductions = deductions;
+    if (netSalary !== undefined) payroll.netSalary = netSalary;
+
+    savePayroll();
+    res.json({ message: 'Payroll record updated successfully', payroll });
+});
+
+app.delete('/api/payroll/:payrollId', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can delete payroll records' });
+    }
+
+    const payrollId = parseInt(req.params.payrollId);
+    const payrollIndex = payrollRecords.findIndex(p => p.id === payrollId);
+
+    if (payrollIndex === -1) {
+        return res.status(404).json({ error: 'Payroll record not found' });
+    }
+
+    payrollRecords.splice(payrollIndex, 1);
+    savePayroll();
+    res.json({ message: 'Payroll record deleted successfully' });
 });
 
 // File serving
