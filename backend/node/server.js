@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
-const { getChatbot } = require('./chatbot');
+
 const { setupLogger } = require('./logger');
 
 const app = express();
@@ -1299,108 +1299,6 @@ app.delete('/api/payroll/:payrollId', requireAuth, (req, res) => {
 
 // File serving
 app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads')));
-
-// Chatbot route
-app.post('/api/chat', requireAuth, (req, res) => {
-    const user = req.user;
-    const { message } = req.body;
-
-    if (!message) {
-        return res.status(400).json({ error: 'Message is required' });
-    }
-
-    const chatbot = getChatbot(BASE_DIR);
-    const response = chatbot.getResponse(user.id, message);
-
-    res.json({ response });
-});
-
-// Simplified text analysis (without ML libraries)
-app.post('/api/analyze_text', (req, res) => {
-    const { text } = req.body;
-
-    if (!text) {
-        return res.status(400).json({ error: 'No text provided' });
-    }
-
-    // Simple regex-based evidence extraction
-    const evidence = {
-        emails: (text.match(/[\w\.-]+@[\w\.-]+/g) || []),
-        phones: (text.match(/\+?\d[\d\-\s]{7,}\d/g) || []),
-        ips: (text.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g) || []),
-        urls: (text.match(/https?:\/\/[\w\.\/\-_%?=&]+/g) || []),
-        money: (text.match(/\$\s?\d+[\d,]*(\.\d+)?|\d+[\d,]*\s?(?:USD|INR|Rs\.?|₹)/g) || []),
-        dates: (text.match(/\b(?:\d{1,2}[\-/]\d{1,2}[\-/]\d{2,4}|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})/g) || []),
-        entities: { PERSON: [], ORG: [], GPE: [] }
-    };
-
-    // Simple rule-based classification
-    const textLower = text.toLowerCase();
-    let classification = { label: 'Normal', confidence: 0.6 };
-
-    if (/\b(?:transfer|account|withdraw|payment|bank|credit card|password|verify)\b/.test(textLower)) {
-        classification = { label: 'Fraud', confidence: 0.6 };
-    } else if (/\b(?:kill|hurt|threat|attack|harm)\b/.test(textLower)) {
-        classification = { label: 'Harassment', confidence: 0.7 };
-    } else if (/\b(?:malware|c2|exploit|ransom|virus|trojan|backdoor)\b/.test(textLower)) {
-        classification = { label: 'Malware', confidence: 0.8 };
-    }
-
-    const priorityScore = evidence.emails.length + evidence.phones.length + evidence.money.length;
-
-    const response = {
-        evidence,
-        classification,
-        priority_score: priorityScore,
-        summary: `Found ${evidence.entities.PERSON.length + evidence.entities.ORG.length + evidence.entities.GPE.length} named entities and ${priorityScore} high-value hits`
-    };
-
-    res.json(response);
-});
-
-// File analysis route (simplified)
-app.post('/api/analyze_file', upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file part' });
-    }
-
-    let text = '';
-
-    // Try to read as text
-    try {
-        text = fs.readFileSync(req.file.path, 'utf8');
-    } catch (error) {
-        return res.status(400).json({ error: 'Could not read file as text' });
-    }
-
-    // Simple analysis
-    const lines = text.split('\n').length;
-    const words = text.split(/\s+/).length;
-    const chars = text.length;
-
-    const evidence = {
-        emails: (text.match(/[\w\.-]+@[\w\.-]+/g) || []),
-        phones: (text.match(/\+?\d[\d\-\s]{7,}\d/g) || []),
-        ips: (text.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g) || []),
-        urls: (text.match(/https?:\/\/[\w\.\/\-_%?=&]+/g) || []),
-        money: (text.match(/\$\s?\d+[\d,]*(\.\d+)?|\d+[\d,]*\s?(?:USD|INR|Rs\.?|₹)/g) || []),
-        dates: (text.match(/\b(?:\d{1,2}[\-/]\d{1,2}[\-/]\d{2,4}|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})/g) || [])
-    };
-
-    const analysis = {
-        file_info: {
-            filename: req.file.originalname,
-            size: req.file.size,
-            lines,
-            words,
-            characters: chars
-        },
-        evidence,
-        summary: `File contains ${lines} lines, ${words} words, and ${evidence.emails.length + evidence.phones.length + evidence.money.length} potential sensitive items`
-    };
-
-    res.json(analysis);
-});
 
 // Health check
 app.get('/api/health', (req, res) => {

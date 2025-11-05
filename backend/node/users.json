@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "email": "ads766@gmail.com",
+    "password": "8b9b0bfaec494522265e3fd6bf6418783e55578f6c3317493ec7289b30a291f9",
+    "role": "admin",
+    "name": "ghggg",
+    "phone": "7876867878",
+    "qualification": ""
+  },
+  {
+    "id": 2,
+    "email": "ruit34@gmail.com",
+    "password": "94e971c2da2bdba9f6a301090fd2de7efded23c937746ed5883c548c5fbaff71",
+    "role": "employee",
+    "name": "kuik",
+    "phone": "9870909807",
+    "qualification": ""
+  },
+  {
+    "id": 3,
+    "email": "hr64765@gmail.com",
+    "password": "3e6c7a7ff32718a5f409f538e9de97ea9327dfa59e43d3e402d3ec37fcbc4022",
+    "role": "hr",
+    "name": "kiran",
+    "phone": "898979898",
+    "qualification": ""
+  },
+  {
+    "id": 4,
+    "email": "jerrymerlin@gmail.com",
+    "password": "4ec8b2311e35aad43bb08c7f64f12c7a7527d3016ae00bf406b39dfff1455029",
+    "role": "admin",
+    "name": "Jerrymerlin",
+    "phone": "9879870909",
+    "qualification": ""
+  }
+]
