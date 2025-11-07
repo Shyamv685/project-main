@@ -223,5 +223,23 @@
     "name": "Kiran",
     "phone": "97887788",
     "qualification": ""
+  },
+  {
+    "id": 26,
+    "email": "dcvfdfgvdfgvdfgvdf@gmail.com",
+    "password": "e53a550caa7e87f0fde883c7dd1b93a3b96cd38b8705f08e279817d3f258beb8",
+    "role": "employee",
+    "name": "Ravi Kumar R",
+    "phone": "67876979879",
+    "qualification": ""
+  },
+  {
+    "id": 27,
+    "email": "admin@gmail.com",
+    "password": "f6cd439e43f318550c5b2270a00779f51a74d543817390708c85327ab16db2ba",
+    "role": "admin",
+    "name": "aduh",
+    "phone": "678789789",
+    "qualification": ""
   }
 ]

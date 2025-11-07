@@ -1,6 +1,7 @@
 import { Bell, Search, User, LogOut, Moon, Sun, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import Modal from "../common/Modal";
 
 interface HeaderBarProps {
   sidebarCollapsed: boolean;
@@ -19,6 +20,7 @@ export default function HeaderBar({ sidebarCollapsed, role, onRoleChange }: Head
     { id: 2, message: "Your profile has been updated successfully.", time: "1 hour ago", read: false },
     { id: 3, message: "New leave request submitted.", time: "30 minutes ago", read: true },
   ]);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,9 +84,17 @@ export default function HeaderBar({ sidebarCollapsed, role, onRoleChange }: Head
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
     localStorage.removeItem('user');
     navigate("/");
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   const toggleNotifications = () => {
@@ -213,7 +223,7 @@ export default function HeaderBar({ sidebarCollapsed, role, onRoleChange }: Head
               )}
             </div>
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Logout"
             >
@@ -222,6 +232,32 @@ export default function HeaderBar({ sidebarCollapsed, role, onRoleChange }: Head
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={showLogoutModal}
+        onClose={handleLogoutCancel}
+        title="Confirm Logout"
+      >
+        <div className="text-center">
+          <p className="text-gray-700 dark:text-gray-300 mb-6">
+            Are you sure you want to logout?
+          </p>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={handleLogoutCancel}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleLogoutConfirm}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </Modal>
     </header>
   );
 }
