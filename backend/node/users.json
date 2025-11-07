@@ -241,5 +241,14 @@
     "name": "aduh",
     "phone": "678789789",
     "qualification": ""
+  },
+  {
+    "id": 28,
+    "email": "Shivaraj@gmail.com",
+    "password": "1e27822e386b263146aa9d61cb57c6fa831abfffd333da246ec67a5e191e07f9",
+    "role": "admin",
+    "name": "Shivaraj",
+    "phone": "67869788998",
+    "qualification": ""
   }
 ]

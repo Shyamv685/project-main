@@ -1306,6 +1306,107 @@ app.delete('/api/payroll/:payrollId', requireAuth, (req, res) => {
     res.json({ message: 'Payroll record deleted successfully' });
 });
 
+// Admin user management routes
+app.get('/api/admin/users', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can access user management' });
+    }
+
+    const usersWithoutPasswords = users.map(u => {
+        const { password, ...userWithoutPassword } = u;
+        return userWithoutPassword;
+    });
+
+    res.json({ users: usersWithoutPasswords });
+});
+
+app.post('/api/admin/users', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can create users' });
+    }
+
+    const { email, password, role, name, phone, qualification } = req.body;
+
+    if (!email || !password || !role || !name) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (users.some(u => u.email === email)) {
+        return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const newUser = {
+        id: users.length + 1,
+        email,
+        password: hashPassword(password),
+        role,
+        name,
+        phone: phone || '',
+        qualification: qualification || ''
+    };
+
+    users.push(newUser);
+    saveUsers();
+
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.json({ message: 'User created successfully', user: userWithoutPassword });
+});
+
+app.put('/api/admin/users/:userId', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can update users' });
+    }
+
+    const userId = parseInt(req.params.userId);
+    const userToUpdate = users.find(u => u.id === userId);
+
+    if (!userToUpdate) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { email, role, name, phone, qualification } = req.body;
+
+    if (email && email !== userToUpdate.email && users.some(u => u.email === email && u.id !== userId)) {
+        return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    if (email) userToUpdate.email = email;
+    if (role) userToUpdate.role = role;
+    if (name) userToUpdate.name = name;
+    if (phone !== undefined) userToUpdate.phone = phone;
+    if (qualification !== undefined) userToUpdate.qualification = qualification;
+
+    saveUsers();
+
+    const { password: _, ...userWithoutPassword } = userToUpdate;
+    res.json({ message: 'User updated successfully', user: userWithoutPassword });
+});
+
+app.delete('/api/admin/users/:userId', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can delete users' });
+    }
+
+    const userId = parseInt(req.params.userId);
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+
+    users.splice(userIndex, 1);
+    saveUsers();
+    res.json({ message: 'User deleted successfully' });
+});
+
 // Settings routes
 app.get('/api/settings', requireAuth, (req, res) => {
     const user = req.user;
