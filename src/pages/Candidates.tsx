@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Search, Filter, Eye, Download, Star, MessageSquare } from "lucide-react";
+import { Search, Filter, Eye, Download, Star, MessageSquare, Calendar } from "lucide-react";
+import CandidateDetails from "../components/candidates/CandidateDetails";
+import InterviewScheduler from "../components/interviews/InterviewScheduler";
 
 interface Candidate {
   id: number;
@@ -53,6 +55,10 @@ export default function Candidates() {
   ]);
 
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showInterviewScheduler, setShowInterviewScheduler] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,7 +71,33 @@ export default function Candidates() {
     }
   };
 
-  const filteredCandidates = filter === 'all' ? candidates : candidates.filter(candidate => candidate.status === filter);
+  const filteredCandidates = filter === 'all'
+    ? candidates.filter(candidate =>
+        candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.position.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : candidates.filter(candidate =>
+        candidate.status === filter &&
+        (candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         candidate.position.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+
+  const handleViewDetails = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+    setShowDetails(true);
+  };
+
+  const handleScheduleInterview = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+    setShowInterviewScheduler(true);
+  };
+
+  const handleDownloadResume = (resumeUrl: string) => {
+    // In a real app, this would trigger a download
+    console.log('Downloading resume:', resumeUrl);
+  };
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -92,6 +124,8 @@ export default function Candidates() {
                 <input
                   type="text"
                   placeholder="Search candidates..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -191,14 +225,26 @@ export default function Candidates() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                      <button
+                        onClick={() => handleViewDetails(candidate)}
+                        title="View Details"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
-                        <MessageSquare className="w-4 h-4" />
+                      <button
+                        onClick={() => handleScheduleInterview(candidate)}
+                        title="Schedule Interview"
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                      >
+                        <Calendar className="w-4 h-4" />
                       </button>
                       {candidate.resumeUrl && (
-                        <button className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300">
+                        <button
+                          onClick={() => handleDownloadResume(candidate.resumeUrl)}
+                          title="Download Resume"
+                          className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
+                        >
                           <Download className="w-4 h-4" />
                         </button>
                       )}
@@ -220,6 +266,27 @@ export default function Candidates() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {showDetails && selectedCandidate && (
+        <CandidateDetails
+          candidate={selectedCandidate}
+          onClose={() => {
+            setShowDetails(false);
+            setSelectedCandidate(null);
+          }}
+        />
+      )}
+
+      {showInterviewScheduler && selectedCandidate && (
+        <InterviewScheduler
+          candidate={selectedCandidate}
+          onClose={() => {
+            setShowInterviewScheduler(false);
+            setSelectedCandidate(null);
+          }}
+        />
+      )}
     </div>
   );
 }

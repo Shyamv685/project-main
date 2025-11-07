@@ -18,6 +18,8 @@ const allMenuItems = [
   { icon: Icons.Calendar, label: "Leave", path: "/leave", roles: ["hr"] },
   { icon: Icons.Calendar, label: "Leave Request", path: "/leave", roles: ["employee"] },
   { icon: Icons.DollarSign, label: "Payroll", path: "/payroll", roles: ["hr"] },
+  { icon: Icons.DollarSign, label: "Salary", path: "/salary", roles: ["employee"] },
+  { icon: Icons.DollarSign, label: "Payroll Correction", path: "/payroll-correction", roles: ["hr"] },
   { type: "heading", label: "Recruitment", roles: ["hr", "employee"] },
   { icon: Icons.Clock, label: "Timesheet", path: "/timesheet", roles: ["employee"] },
   { icon: Icons.Briefcase, label: "Jobs", path: "/jobs", roles: ["hr", "employee"] },

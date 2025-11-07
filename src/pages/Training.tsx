@@ -8,6 +8,7 @@ import CertificateCard from "../components/training/CertificateCard";
 import FeedbackForm from "../components/training/FeedbackForm";
 import TrainingCalendar from "../components/training/TrainingCalendar";
 
+
 interface Training {
   id: number;
   title: string;
@@ -33,7 +34,7 @@ interface Training {
 }
 
 export default function Training() {
-  const [activeTab, setActiveTab] = useState<'available' | 'my' | 'certificates' | 'calendar'>('available');
+  const [activeTab, setActiveTab] = useState<'available' | 'my' | 'certificates' | 'calendar' | 'resources' | 'analytics'>('available');
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [myTrainings, setMyTrainings] = useState<Training[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
@@ -98,7 +99,9 @@ export default function Training() {
     { id: 'available', label: 'Available Trainings', icon: Icons.BookOpen },
     { id: 'my', label: 'My Trainings', icon: Icons.UserCheck },
     { id: 'certificates', label: 'Certificates', icon: Icons.Award },
-    { id: 'calendar', label: 'Training Calendar', icon: Icons.Calendar }
+    { id: 'calendar', label: 'Training Calendar', icon: Icons.Calendar },
+    { id: 'resources', label: 'Learning Resources', icon: Icons.FileText },
+    { id: 'analytics', label: 'Analytics', icon: Icons.BarChart3 }
   ];
 
   return (
@@ -225,6 +228,76 @@ export default function Training() {
               </div>
 
               <TrainingCalendar trainings={trainings} />
+            </div>
+          )}
+
+          {activeTab === 'resources' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Learning Resources</h2>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Icons.FileText className="w-4 h-4" />
+                  <span>Additional learning materials</span>
+                </div>
+              </div>
+
+              <div className="text-center py-12">
+                <Icons.FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Learning Resources Coming Soon</h3>
+                <p className="text-gray-600 dark:text-gray-400">We're preparing additional learning materials, videos, and articles for you.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Training Analytics</h2>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Icons.BarChart3 className="w-4 h-4" />
+                  <span>Track your progress</span>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.BookOpen className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Enrolled</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{myTrainings.length}</div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {myTrainings.filter(t => t.enrollment?.status === 'Completed').length}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.Award className="w-5 h-5 text-yellow-600" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Certificates</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {myTrainings.filter(t => t.enrollment?.status === 'Completed').length}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.Clock className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">In Progress</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {myTrainings.filter(t => t.enrollment?.status === 'In Progress').length}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

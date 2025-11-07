@@ -40,10 +40,10 @@ export default function SystemSettings() {
     try {
       setFetching(true);
       setError(null);
-      const response = await fetch('http://127.0.0.1:5000/api/admin/settings', {
+      const response = await fetch('http://127.0.0.1:5000/api/settings', {
         headers: {
           'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
-          'X-User-Role': 'admin'
+          'X-User-Role': 'hr'
         }
       });
       if (response.ok) {
@@ -67,12 +67,12 @@ export default function SystemSettings() {
     setSuccess(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/admin/settings', {
+      const response = await fetch('http://127.0.0.1:5000/api/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-User-Email': JSON.parse(localStorage.getItem('user') || '{}').email,
-          'X-User-Role': 'admin'
+          'X-User-Role': 'hr'
         },
         body: JSON.stringify(settings),
       });

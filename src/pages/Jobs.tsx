@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Eye, Plus, Trash2 } from "lucide-react";
+import CandidateDetails from "../components/candidates/CandidateDetails";
+import InterviewScheduler from "../components/interviews/InterviewScheduler";
+import JobManager from "../components/jobs/JobManager";
+import JobForm from "../components/jobs/JobForm";
+import Modal from "../components/common/Modal";
+import Alert from "../components/common/Alert";
 
 interface Job {
   id: number;
@@ -8,11 +14,16 @@ interface Job {
   location: string;
   type: string;
   status: 'active' | 'draft' | 'closed';
-  applicants: number;
+  applicants?: number;
   postedDate: string;
+  description: string;
+  requirements: string;
+  salary: string;
+  benefits: string;
 }
 
 export default function Jobs() {
+  const [userRole, setUserRole] = useState<string>("employee");
   const [jobs, setJobs] = useState<Job[]>([
     {
       id: 1,
@@ -22,7 +33,11 @@ export default function Jobs() {
       type: "Full-time",
       status: 'active',
       applicants: 24,
-      postedDate: "2025-10-10"
+      postedDate: "2025-10-10",
+      description: "We are looking for a Senior Software Engineer to join our engineering team...",
+      requirements: "5+ years of experience, React, Node.js, TypeScript",
+      salary: "$120,000 - $160,000",
+      benefits: "Health insurance, 401k, remote work options"
     },
     {
       id: 2,
@@ -32,7 +47,11 @@ export default function Jobs() {
       type: "Full-time",
       status: 'active',
       applicants: 18,
-      postedDate: "2025-10-08"
+      postedDate: "2025-10-08",
+      description: "Lead product strategy and execution for our core products...",
+      requirements: "3+ years PM experience, analytics skills, leadership",
+      salary: "$130,000 - $170,000",
+      benefits: "Stock options, health/dental/vision, flexible PTO"
     },
     {
       id: 3,
@@ -42,12 +61,88 @@ export default function Jobs() {
       type: "Contract",
       status: 'draft',
       applicants: 0,
-      postedDate: "2025-10-12"
+      postedDate: "2025-10-12",
+      description: "Create intuitive user experiences for our web applications...",
+      requirements: "3+ years UX design, Figma, user research skills",
+      salary: "$80 - $120/hour",
+      benefits: "Flexible schedule, project-based work"
     }
   ]);
 
-  const [showAddForm, setShowAddForm] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showCandidateDetails, setShowCandidateDetails] = useState(false);
+  const [showInterviewScheduler, setShowInterviewScheduler] = useState(false);
+  const [showJobManager, setShowJobManager] = useState(false);
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [alert, setAlert] = useState<{
+    type: "success" | "error" | "warning" | "info";
+    message: string;
+    isVisible: boolean;
+  }>({ type: "success", message: "", isVisible: false });
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setUserRole(userData.role);
+    }
+  }, []);
+
+  const handleDeleteJob = (jobId: number) => {
+    if (window.confirm('Are you sure you want to delete this job posting?')) {
+      setJobs(jobs.filter(job => job.id !== jobId));
+      setAlert({
+        type: "success",
+        message: "Job deleted successfully",
+        isVisible: true
+      });
+      setTimeout(() => setAlert({ ...alert, isVisible: false }), 3000);
+    }
+  };
+
+  const handleSaveJob = (jobData: Partial<Job>) => {
+    if (editingJob) {
+      // Update existing job
+      setJobs(jobs.map(job =>
+        job.id === editingJob.id
+          ? { ...job, ...jobData }
+          : job
+      ));
+      setAlert({
+        type: "success",
+        message: "Job updated successfully",
+        isVisible: true
+      });
+    } else {
+      // Add new job
+      const newJob: Job = {
+        id: Math.max(...jobs.map(j => j.id)) + 1,
+        title: jobData.title || '',
+        department: jobData.department || '',
+        location: jobData.location || '',
+        type: jobData.type || 'Full-time',
+        status: jobData.status || 'draft',
+        applicants: 0,
+        postedDate: new Date().toISOString().split('T')[0],
+        description: jobData.description || '',
+        requirements: jobData.requirements || '',
+        salary: jobData.salary || '',
+        benefits: jobData.benefits || ''
+      };
+      setJobs([...jobs, newJob]);
+      setAlert({
+        type: "success",
+        message: "Job created successfully",
+        isVisible: true
+      });
+    }
+    setShowJobForm(false);
+    setEditingJob(null);
+    setTimeout(() => setAlert({ ...alert, isVisible: false }), 3000);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -58,22 +153,39 @@ export default function Jobs() {
     }
   };
 
-  const filteredJobs = filter === 'all' ? jobs : jobs.filter(job => job.status === filter);
+  const filteredJobs = filter === 'all'
+    ? jobs.filter(job =>
+        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.location.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : jobs.filter(job =>
+        job.status === filter &&
+        (job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         job.location.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+
+
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Jobs</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage job postings and applications</p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Jobs</h1>
+            <p className="text-gray-600 dark:text-gray-400">View available job postings</p>
+          </div>
+          {userRole === "hr" && (
+            <button
+              onClick={() => setShowJobManager(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Manage Jobs
+            </button>
+          )}
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          Post New Job
-        </button>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -85,6 +197,8 @@ export default function Jobs() {
                 <input
                   type="text"
                   placeholder="Search jobs..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -168,15 +282,25 @@ export default function Jobs() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                      <button
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setShowCandidateDetails(true);
+                        }}
+                        title="View Details"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {userRole === "hr" && (
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          title="Delete Job"
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -195,6 +319,96 @@ export default function Jobs() {
           </div>
         )}
       </div>
+
+
+
+      {/* Candidate Details Modal */}
+      {selectedJob && (
+        <CandidateDetails
+          candidate={{
+            id: selectedJob.id,
+            name: "Sample Candidate", // This would come from actual candidate data
+            email: "candidate@example.com",
+            phone: "+1 (555) 123-4567",
+            position: selectedJob.title,
+            experience: "3-5 years",
+            status: 'new',
+            rating: 4,
+            appliedDate: new Date().toISOString().split('T')[0],
+            notes: "Strong candidate with relevant experience"
+          }}
+          isOpen={showCandidateDetails}
+          onClose={() => {
+            setShowCandidateDetails(false);
+            setSelectedJob(null);
+          }}
+          onUpdate={(candidate) => {
+            console.log('Candidate updated:', candidate);
+            // Here you would typically update the candidate in your backend
+          }}
+          onScheduleInterview={(candidateId: number) => {
+            setShowCandidateDetails(false);
+            setShowInterviewScheduler(true);
+          }}
+        />
+      )}
+
+      {/* Interview Scheduler Modal */}
+      {selectedJob && (
+        <InterviewScheduler
+          candidateId={0} // This would come from the selected candidate
+          candidateName="" // This would come from the selected candidate
+          position={selectedJob.title}
+          isOpen={showInterviewScheduler}
+          onClose={() => {
+            setShowInterviewScheduler(false);
+            setSelectedJob(null);
+          }}
+          onSave={(interview) => {
+            console.log('Interview scheduled:', interview);
+            // Here you would typically save the interview to your backend
+          }}
+        />
+      )}
+
+      {/* Job Manager Modal */}
+      {showJobManager && (
+        <JobManager
+          jobs={jobs}
+          isOpen={showJobManager}
+          onClose={() => setShowJobManager(false)}
+          onCreate={() => {
+            setEditingJob(null);
+            setShowJobForm(true);
+          }}
+          onEdit={(job) => {
+            setEditingJob(job);
+            setShowJobForm(true);
+          }}
+        />
+      )}
+
+      {/* Job Form Modal */}
+      {showJobForm && (
+        <JobForm
+          job={editingJob}
+          isOpen={showJobForm}
+          onClose={() => {
+            setShowJobForm(false);
+            setEditingJob(null);
+          }}
+          onSave={handleSaveJob}
+        />
+      )}
+
+      {/* Alert */}
+      {alert.isVisible && (
+        <Alert
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ ...alert, isVisible: false })}
+        />
+      )}
     </div>
   );
 }

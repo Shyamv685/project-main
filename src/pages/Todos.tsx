@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Check, X, Edit2 } from "lucide-react";
+import PayrollTable from "@/components/payroll/PayrollTable";
+import PayrollForm from "@/components/payroll/PayrollForm";
+import Modal from "@/components/common/Modal";
+import { payrollData } from "@/data/dummyData";
 
 interface Todo {
   id: number;
@@ -11,32 +15,143 @@ interface Todo {
 }
 
 export default function Todos() {
-  const [todos, setTodos] = useState<Todo[]>([
-    {
-      id: 1,
-      title: "Review employee leave requests",
-      description: "Check and approve pending leave applications",
-      completed: false,
-      priority: 'high',
-      dueDate: "2025-10-18"
-    },
-    {
-      id: 2,
-      title: "Schedule team meeting",
-      description: "Organize monthly team sync meeting",
-      completed: true,
-      priority: 'medium',
-      dueDate: "2025-10-16"
-    },
-    {
-      id: 3,
-      title: "Update employee handbook",
-      description: "Review and update company policies",
-      completed: false,
-      priority: 'low',
-      dueDate: "2025-10-25"
-    }
-  ]);
+  const [userRole, setUserRole] = useState<string>('hr'); // Start with HR role to show payroll task
+
+  // Payroll management state
+  const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
+  const [isPayrollFormOpen, setIsPayrollFormOpen] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<any>(null);
+  const [editingPayroll, setEditingPayroll] = useState<any>(null);
+
+  const getRoleSpecificTodos = (role: string): Todo[] => {
+    const baseTodos: Record<string, Todo[]> = {
+      employee: [
+        {
+          id: 1,
+          title: "Submit weekly timesheet",
+          description: "Log your hours for the current week",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-18"
+        },
+        {
+          id: 2,
+          title: "Complete mandatory training",
+          description: "Finish the safety and compliance training module",
+          completed: false,
+          priority: 'medium',
+          dueDate: "2025-10-20"
+        },
+        {
+          id: 3,
+          title: "Request annual leave",
+          description: "Submit your vacation request for next quarter",
+          completed: false,
+          priority: 'low',
+          dueDate: "2025-10-25"
+        },
+        {
+          id: 4,
+          title: "Update profile information",
+          description: "Review and update your personal details",
+          completed: true,
+          priority: 'low',
+          dueDate: "2025-10-15"
+        }
+      ],
+      hr: [
+        {
+          id: 1,
+          title: "Review employee leave requests",
+          description: "Check and approve pending leave applications",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-18"
+        },
+        {
+          id: 2,
+          title: "Schedule team meeting",
+          description: "Organize monthly team sync meeting",
+          completed: true,
+          priority: 'medium',
+          dueDate: "2025-10-16"
+        },
+        {
+          id: 3,
+          title: "Update employee handbook",
+          description: "Review and update company policies",
+          completed: false,
+          priority: 'low',
+          dueDate: "2025-10-25"
+        },
+        {
+          id: 4,
+          title: "Manage employee payroll with CRUD operations",
+          description: "Create, read, update, and delete payroll records for employees",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-30"
+        },
+        {
+          id: 5,
+          title: "Conduct performance reviews",
+          description: "Schedule and complete quarterly reviews",
+          completed: false,
+          priority: 'medium',
+          dueDate: "2025-11-05"
+        }
+      ],
+      admin: [
+        {
+          id: 1,
+          title: "System maintenance",
+          description: "Perform scheduled server maintenance",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-19"
+        },
+        {
+          id: 2,
+          title: "User access management",
+          description: "Review and update user permissions",
+          completed: false,
+          priority: 'medium',
+          dueDate: "2025-10-22"
+        },
+        {
+          id: 3,
+          title: "Security audit",
+          description: "Conduct monthly security assessment",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-28"
+        },
+        {
+          id: 4,
+          title: "Backup verification",
+          description: "Verify data backups are working correctly",
+          completed: true,
+          priority: 'medium',
+          dueDate: "2025-10-17"
+        },
+        {
+          id: 5,
+          title: "Software updates",
+          description: "Apply critical security patches",
+          completed: false,
+          priority: 'high',
+          dueDate: "2025-10-21"
+        }
+      ]
+    };
+    return baseTodos[role] || baseTodos.employee;
+  };
+
+  const [todos, setTodos] = useState<Todo[]>(getRoleSpecificTodos(userRole));
+
+  useEffect(() => {
+    setTodos(getRoleSpecificTodos(userRole));
+  }, [userRole]);
 
   const [newTodo, setNewTodo] = useState({
     title: '',
@@ -68,6 +183,48 @@ export default function Todos() {
     setTodos(todos.map(todo =>
       todo.id === id ? { ...todo, completed: !todo.completed } : todo
     ));
+
+    // If the payroll management task is completed, show the payroll interface
+    if (id === 4 && userRole === 'hr') {
+      setIsPayrollModalOpen(true);
+    }
+  };
+
+  // Payroll management handlers
+  const handleViewPayslip = (id: number) => {
+    const payslip = payrollData.find((p) => p.id === id);
+    if (payslip) {
+      setSelectedPayslip(payslip);
+      setIsPayrollModalOpen(true);
+    }
+  };
+
+  const handleAddPayroll = () => {
+    setEditingPayroll(null);
+    setIsPayrollFormOpen(true);
+  };
+
+  const handleEditPayroll = (payroll: any) => {
+    setEditingPayroll(payroll);
+    setIsPayrollFormOpen(true);
+  };
+
+  const handleDeletePayroll = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this payroll record?")) {
+      try {
+        // await api.deleteSalary(id);
+        console.log("Delete payroll:", id);
+        // Refresh data here
+      } catch (error) {
+        console.error("Failed to delete payroll:", error);
+      }
+    }
+  };
+
+  const handleFormSuccess = () => {
+    // Refresh payroll data
+    console.log("Payroll data updated");
+    setIsPayrollFormOpen(false);
   };
 
   const deleteTodo = (id: number) => {
@@ -93,13 +250,27 @@ export default function Todos() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Todos</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your tasks and priorities</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Todo
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Role:</label>
+            <select
+              value={userRole}
+              onChange={(e) => setUserRole(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            >
+              <option value="employee">Employee</option>
+              <option value="hr">HR</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Add Todo
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -260,6 +431,46 @@ export default function Todos() {
           </div>
         )}
       </div>
+
+      {/* Payroll Management Modal */}
+      <Modal
+        isOpen={isPayrollModalOpen}
+        onClose={() => setIsPayrollModalOpen(false)}
+        title="Payroll Management System"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Welcome to the Payroll Management System. Here you can manage employee salaries, view payslips, and perform CRUD operations.
+          </p>
+
+          <PayrollTable
+            onViewPayslip={handleViewPayslip}
+            onAddPayroll={handleAddPayroll}
+            onEditPayroll={handleEditPayroll}
+            onDeletePayroll={handleDeletePayroll}
+            userRole={userRole}
+          />
+        </div>
+      </Modal>
+
+      {/* Payroll Form Modal */}
+      <PayrollForm
+        isOpen={isPayrollFormOpen}
+        onClose={() => setIsPayrollFormOpen(false)}
+        onSuccess={handleFormSuccess}
+        editingPayroll={editingPayroll}
+      />
+
+      {/* Payslip Modal */}
+      <Modal
+        isOpen={!!selectedPayslip}
+        onClose={() => setSelectedPayslip(null)}
+        title="Payslip Details"
+        size="lg"
+      >
+        {selectedPayslip && <PayslipCard data={selectedPayslip} />}
+      </Modal>
     </div>
   );
 }

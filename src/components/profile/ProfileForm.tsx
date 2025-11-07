@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Phone, Mail, Shield, Upload, Camera, X, FileText } from "lucide-react";
+import { User, Phone, Mail, Shield, Upload, Camera, X, FileText, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import DocumentUpload from "../documents/DocumentUpload";
 import DocumentList from "../documents/DocumentList";
+import { formatCurrency } from "@/lib/utils";
 
 export default function ProfileForm() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'documents'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'salary'>('profile');
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [qualification, setQualification] = useState("");
@@ -17,6 +18,8 @@ export default function ProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [salaryData, setSalaryData] = useState<any>(null);
+  const [salaryLoading, setSalaryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -30,8 +33,32 @@ export default function ProfileForm() {
       setEmail(user.email || "");
       setRole(user.role || "");
       setProfilePic(user.profilePic || null);
+
+      // Load salary data if user is employee
+      if (user.role === 'employee') {
+        loadSalaryData();
+      }
     }
   }, []);
+
+  const loadSalaryData = async () => {
+    setSalaryLoading(true);
+    try {
+      const salaries = await api.getSalaries();
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        const userSalary = salaries.find((s: any) => s.employeeId === user.id);
+        if (userSalary) {
+          setSalaryData(userSalary);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load salary data:', error);
+    } finally {
+      setSalaryLoading(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,6 +163,20 @@ export default function ProfileForm() {
             <FileText className="w-4 h-4 inline mr-2" />
             Documents
           </button>
+          {role === 'employee' && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('salary')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'salary'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <DollarSign className="w-4 h-4 inline mr-2" />
+              Salary Information
+            </button>
+          )}
         </nav>
       </div>
 
@@ -286,13 +327,66 @@ export default function ProfileForm() {
           {isLoading ? "Updating..." : "Update Profile"}
         </button>
           </form>
-        ) : (
+        ) : activeTab === 'documents' ? (
           <div className="space-y-6">
             <DocumentUpload onUploadSuccess={() => {
               // Refresh documents list if needed
               window.location.reload();
             }} />
             <DocumentList />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {salaryLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">Loading salary information...</p>
+              </div>
+            ) : salaryData ? (
+              <div className="space-y-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Salary Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Basic Salary</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {formatCurrency(salaryData.basicSalary)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Allowances</span>
+                        <span className="font-semibold text-green-600">
+                          +{formatCurrency(salaryData.allowances?.total || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Deductions</span>
+                        <span className="font-semibold text-red-600">
+                          -{formatCurrency(salaryData.deductions?.total || 0)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-lg font-semibold text-gray-900 dark:text-white">Net Salary</span>
+                        <span className="text-xl font-bold text-blue-600">
+                          {formatCurrency(salaryData.basicSalary + (salaryData.allowances?.total || 0) - (salaryData.deductions?.total || 0))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <p>Last updated: {new Date(salaryData.updatedAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">No salary information available</p>
+              </div>
+            )}
           </div>
         )}
       </div>

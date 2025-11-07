@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "employeeId": 22,
+    "leaveType": "Sick Leave",
+    "startDate": "2025-11-06",
+    "endDate": "2025-11-11",
+    "reason": "High Fever ",
+    "status": "Pending",
+    "createdAt": "2025-11-07T17:41:54.836Z",
+    "approvedAt": null,
+    "approvedBy": null
+  },
+  {
+    "id": 2,
+    "employeeId": 23,
+    "leaveType": "Sick Leave",
+    "startDate": "2025-11-08",
+    "endDate": "2025-11-21",
+    "reason": "High Fever",
+    "status": "Pending",
+    "createdAt": "2025-11-07T17:45:49.517Z",
+    "approvedAt": null,
+    "approvedBy": null
+  },
+  {
+    "id": 3,
+    "employeeId": 24,
+    "leaveType": "Sick Leave",
+    "startDate": "2025-11-06",
+    "endDate": "2025-11-11",
+    "reason": "High Fever",
+    "status": "Pending",
+    "createdAt": "2025-11-07T17:53:45.524Z",
+    "approvedAt": null,
+    "approvedBy": null
+  }
+]

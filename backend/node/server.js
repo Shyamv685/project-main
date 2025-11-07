@@ -79,6 +79,14 @@ let announcementsRecords = loadJsonFile('announcements.json');
 let documentsRecords = loadJsonFile('documents.json');
 let payrollRecords = loadJsonFile('payroll.json');
 let leaveRecords = loadJsonFile('leaves.json');
+let settingsRecords = loadJsonFile('settings.json') || {
+  companyName: '',
+  companyEmail: '',
+  companyPhone: '',
+  workingHours: { start: '09:00', end: '17:00' },
+  leavePolicy: { annualLeave: 25, sickLeave: 10 },
+  notifications: { email: true, sms: false },
+};
 
 // Save functions
 function saveUsers() { saveJsonFile('users.json', users); }
@@ -94,6 +102,7 @@ function saveAnnouncements() { saveJsonFile('announcements.json', announcementsR
 function saveDocuments() { saveJsonFile('documents.json', documentsRecords); }
 function savePayroll() { saveJsonFile('payroll.json', payrollRecords); }
 function saveLeaves() { saveJsonFile('leaves.json', leaveRecords); }
+function saveSettings() { saveJsonFile('settings.json', settingsRecords); }
 
 // Authentication middleware
 function requireAuth(req, res, next) {
@@ -188,21 +197,21 @@ app.post('/api/checkin', requireAuth, (req, res) => {
         return res.status(400).json({ error: 'Already checked in today' });
     }
 
-    const checkinTime = new Date().toLocaleTimeString('en-US', {
+    const checkInTime = new Date().toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
     });
 
     if (existing) {
-        existing.checkIn = checkinTime;
+        existing.checkIn = checkInTime;
         existing.status = 'Present';
     } else {
         const record = {
             id: attendanceRecords.length + 1,
             employeeId: user.id,
             date: today,
-            checkIn: checkinTime,
+            checkIn: checkInTime,
             checkOut: null,
             hours: 0,
             status: 'Present'
@@ -211,7 +220,7 @@ app.post('/api/checkin', requireAuth, (req, res) => {
     }
 
     saveAttendance();
-    res.json({ message: 'Checked in successfully', checkInTime });
+    res.json({ message: 'Checked in successfully', checkInTime: checkInTime });
 });
 
 app.post('/api/checkout', requireAuth, (req, res) => {
@@ -1295,6 +1304,37 @@ app.delete('/api/payroll/:payrollId', requireAuth, (req, res) => {
     payrollRecords.splice(payrollIndex, 1);
     savePayroll();
     res.json({ message: 'Payroll record deleted successfully' });
+});
+
+// Settings routes
+app.get('/api/settings', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can view settings' });
+    }
+
+    res.json({ settings: settingsRecords });
+});
+
+app.put('/api/settings', requireAuth, (req, res) => {
+    const user = req.user;
+
+    if (user.role !== 'hr') {
+        return res.status(403).json({ error: 'Only HR can update settings' });
+    }
+
+    const { companyName, companyEmail, companyPhone, workingHours, leavePolicy, notifications } = req.body;
+
+    if (companyName !== undefined) settingsRecords.companyName = companyName;
+    if (companyEmail !== undefined) settingsRecords.companyEmail = companyEmail;
+    if (companyPhone !== undefined) settingsRecords.companyPhone = companyPhone;
+    if (workingHours) settingsRecords.workingHours = workingHours;
+    if (leavePolicy) settingsRecords.leavePolicy = leavePolicy;
+    if (notifications) settingsRecords.notifications = notifications;
+
+    saveSettings();
+    res.json({ message: 'Settings updated successfully', settings: settingsRecords });
 });
 
 // File serving

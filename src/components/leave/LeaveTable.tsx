@@ -25,6 +25,10 @@ interface LeaveTableProps {
 export default function LeaveTable({ onApprove, onReject, userRole, leaveData }: LeaveTableProps) {
   // Use provided leaveData or fallback to dummy data
   const requests = leaveData || [];
+
+  // Get current user data for employee role
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUserName = user.name || user.email || 'Unknown Employee';
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "Approved":
@@ -83,6 +87,11 @@ export default function LeaveTable({ onApprove, onReject, userRole, leaveData }:
             const statusConfig = getStatusConfig(request.status);
             const StatusIcon = statusConfig.icon;
 
+            // For employee role, show current user's name if employeeName is not set
+            const displayName = userRole === 'employee' && !request.employeeName
+              ? currentUserName
+              : request.employeeName;
+
             return (
               <motion.tr
                 key={request.id}
@@ -92,7 +101,7 @@ export default function LeaveTable({ onApprove, onReject, userRole, leaveData }:
                 className="hover:bg-gray-50"
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {request.employeeName}
+                  {displayName}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                   {request.leaveType}

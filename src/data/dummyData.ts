@@ -133,7 +133,12 @@ export const payrollData = [
     allowances: 5000,
     deductions: 8500,
     netSalary: 91500,
-    status: "Paid"
+    status: "Paid",
+    salaryCredited: true,
+    creditedDateTime: "2025-10-01T10:30:00",
+    paymentMonthYear: "October 2025",
+    amountCredited: 91500,
+    remarks: "On-time payment"
   },
   {
     id: 2,
@@ -144,7 +149,12 @@ export const payrollData = [
     allowances: 3000,
     deductions: 6800,
     netSalary: 71200,
-    status: "Paid"
+    status: "Paid",
+    salaryCredited: true,
+    creditedDateTime: "2025-10-01T11:00:00",
+    paymentMonthYear: "October 2025",
+    amountCredited: 71200,
+    remarks: ""
   },
   {
     id: 3,
@@ -155,7 +165,12 @@ export const payrollData = [
     allowances: 2500,
     deductions: 5850,
     netSalary: 61650,
-    status: "Processing"
+    status: "Processing",
+    salaryCredited: false,
+    creditedDateTime: null,
+    paymentMonthYear: "October 2025",
+    amountCredited: 0,
+    remarks: "Processing payment"
   },
   {
     id: 4,
@@ -166,7 +181,12 @@ export const payrollData = [
     allowances: 3500,
     deductions: 6480,
     netSalary: 69020,
-    status: "Processing"
+    status: "Processing",
+    salaryCredited: false,
+    creditedDateTime: null,
+    paymentMonthYear: "October 2025",
+    amountCredited: 0,
+    remarks: "Awaiting approval"
   },
   {
     id: 5,
@@ -177,7 +197,12 @@ export const payrollData = [
     allowances: 4000,
     deductions: 7200,
     netSalary: 76800,
-    status: "Pending"
+    status: "Pending",
+    salaryCredited: false,
+    creditedDateTime: null,
+    paymentMonthYear: "October 2025",
+    amountCredited: 0,
+    remarks: "Pending processing"
   }
 ];
 

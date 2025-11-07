@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "employeeId": 2,
+    "destination": "avadi",
+    "purpose": "work",
+    "startDate": "2025-11-07",
+    "endDate": "2025-11-04",
+    "accommodation": "sdlckvnlsd",
+    "transportation": "bus",
+    "status": "Pending",
+    "date": "2025-11-05"
+  }
+]

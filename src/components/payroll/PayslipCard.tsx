@@ -14,7 +14,7 @@ interface PayslipCardProps {
 
 export default function PayslipCard({ data }: PayslipCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 md:p-8 max-w-2xl w-full mx-auto">
+    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 md:p-8 max-w-2xl w-full mx-auto print:shadow-none print:border-none">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-gray-200">
         <div className="flex items-center gap-3 mb-4 sm:mb-0">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">

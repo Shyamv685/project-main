@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "employeeId": 5,
+    "date": "2025-11-05",
+    "checkIn": "1:39 PM",
+    "checkOut": null,
+    "hours": 0,
+    "status": "Present"
+  },
+  {
+    "id": 2,
+    "employeeId": 2,
+    "date": "2025-11-05",
+    "checkIn": "1:43 PM",
+    "checkOut": "1:45 PM",
+    "hours": 0,
+    "status": "Present"
+  },
+  {
+    "id": 3,
+    "employeeId": 22,
+    "date": "2025-11-07",
+    "checkIn": "11:10 PM",
+    "checkOut": "11:10 PM",
+    "hours": 0,
+    "status": "Present"
+  }
+]

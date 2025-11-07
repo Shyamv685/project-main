@@ -12,9 +12,19 @@ export default function LeaveRequestForm({ onSubmit }: LeaveRequestFormProps) {
     reason: ""
   });
 
+  // Get current user data
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const employeeName = user.name || user.email || 'Unknown Employee';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Include employee name in the form data
+    const dataWithEmployee = {
+      ...formData,
+      employeeName: employeeName,
+      employeeEmail: user.email
+    };
+    onSubmit(dataWithEmployee);
   };
 
   const handleChange = (
